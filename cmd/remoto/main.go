@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/wwt/guac"
+	"remoto.senwize.com/serialbroker"
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 	wd, _ := os.Getwd()
 	mux.Handle("/", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
 	mux.Handle("/websocket-tunnel", wsServer)
+	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket("3.65.42.230:5910"))
 
 	s := &http.Server{
 		Addr:           "0.0.0.0:8080",
