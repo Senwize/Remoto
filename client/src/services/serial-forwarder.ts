@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { AutoWebSocket } from './websocket';
 
 enum State {
   Disconnected,
@@ -12,22 +13,29 @@ enum State {
 export class SerialForwarder extends EventEmitter {
   protected state = State.Disconnected;
   // Websocket connection to serial broker
-  protected ws!: WebSocket;
+  protected aws = new AutoWebSocket(`ws://${location.host}/websocket-serial`);
+  protected ws?: WebSocket;
   // SerialPort to the Pico
-  protected serialPort!: SerialPort;
+  protected serialPort?: SerialPort;
 
   // AbortController can be used to cancel streams
   protected abortController = new AbortController();
   // SerialPort streams
-  protected serialWriteable!: WritableStream<Uint8Array>;
-  protected serialReadable!: ReadableStream<Uint8Array>;
+  protected serialWriteable?: WritableStream<Uint8Array>;
+  protected serialReadable?: ReadableStream<Uint8Array>;
   // Websocket streams
-  protected wsWritable!: WritableStream<Uint8Array>;
-  protected wsReadable!: ReadableStream<Uint8Array>;
+  protected wsWritable?: WritableStream<Uint8Array>;
+  protected wsReadable?: ReadableStream<Uint8Array>;
+
+  constructor() {
+    super();
+    this.aws.addListener('connect', this.onWebsocketConnect.bind(this));
+  }
 
   async connect() {
-    await this.connectWebSocket();
+    // await this.connectWebSocket();
     await this.connectSerialPort();
+    await this.aws.connect();
     this.createPipe();
 
     console.log('[SerialForwarder] Initialized and started');
@@ -36,35 +44,42 @@ export class SerialForwarder extends EventEmitter {
   }
 
   protected createPipe() {
-    this.serialReadable.pipeTo(this.wsWritable, { signal: this.abortController.signal });
-    this.wsReadable.pipeTo(this.serialWriteable, { signal: this.abortController.signal });
+    if (!this.wsReadable || !this.wsWritable || !this.serialReadable || !this.serialWriteable) {
+      throw new Error('Trying to createPipe without all writables/readables');
+    }
+
+    const opts: StreamPipeOptions = {
+      signal: this.abortController.signal,
+      preventAbort: true,
+      preventCancel: true,
+      preventClose: true,
+    };
+    this.serialReadable.pipeTo(this.wsWritable, opts);
+    this.wsReadable.pipeTo(this.serialWriteable, opts);
   }
 
-  protected async connectWebSocket() {
-    // Create WebSocket streams
-    const ws = new WebSocket(`ws://${location.host}/websocket-serial`);
-
-    // Wait for connection
-    await new Promise<void>((resolve) => {
-      ws.addEventListener('open', () => resolve());
-    });
-    console.log('[SerialForwarder] Websocket connected');
-
-    // Handle disconnect
-    ws.addEventListener('close', () => this.onWebSocketDisconnect());
+  protected async onWebsocketConnect(ws: WebSocket) {
+    // Abort stream pipe
+    this.abortController.abort();
+    this.abortController = new AbortController();
+    // Close websocket streams
+    this.wsWritable?.abort();
+    this.wsReadable?.cancel();
 
     // Create websocket streams
     this.wsWritable = newWebSocketWritable(ws);
     this.wsReadable = newWebSocketReadable(ws);
 
-    // Set the websocket
-    this.ws = ws;
+    // recreate pipes
+    this.createPipe();
+
+    console.log('[SerialForwarder] Websocket connected');
   }
 
   protected async connectSerialPort() {
     // Request user to select a serial port
     const port = await navigator.serial.requestPort({
-      filters: [{ usbVendorId: 0x2e8a, usbProductId: 0x0005 }],
+      // filters: [{ usbVendorId: 0x2e8a, usbProductId: 0x0005 }],
     });
 
     // Handle disconnect
@@ -89,7 +104,7 @@ export class SerialForwarder extends EventEmitter {
 
   protected onWebSocketDisconnect() {
     console.log('[SerialForwarder] Websocket disconnected');
-    this.disconnect();
+    // this.disconnect();
   }
 
   protected onSerialPortDisconnect() {
