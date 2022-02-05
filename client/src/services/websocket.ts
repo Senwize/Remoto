@@ -2,9 +2,9 @@ import { EventEmitter } from 'eventemitter3';
 
 export class AutoWebSocket extends EventEmitter {
   private readonly address: string;
-  private ws!: WebSocket;
+  private ws?: WebSocket;
   private keepAlive = false;
-  private consecutiveFailures = 0;
+  private connectionAttempts = 0;
   private maxRetryDelay = 2000;
 
   constructor(address: string) {
@@ -12,34 +12,67 @@ export class AutoWebSocket extends EventEmitter {
     this.address = address;
   }
 
-  onConnect(ws: WebSocket) {
-    this.consecutiveFailures = 0;
+  protected onConnect(ws: WebSocket) {
+    console.log('[AutoWebSocket] Connected');
+    this.connectionAttempts = 0;
     this.ws = ws;
 
     this.emit('connect', ws);
   }
 
   async onDisconnect(ws: WebSocket) {
-    // Remove listeners
-    ws.removeEventListener('open', this.onConnect.bind(this, ws));
-    ws.removeEventListener('close', this.onDisconnect.bind(this, ws));
-    this.emit('disconnect', { consecutiveFailures: this.consecutiveFailures });
+    console.log('[AutoWebSocket] Disconnected');
+    this.emit('disconnect', { attempts: this.connectionAttempts });
+    this.tryConnect();
+  }
 
-    if (this.keepAlive) {
-      // Wait after multiple consecutive failures
-      const retryDelay = Math.max(500 * this.consecutiveFailures, this.maxRetryDelay);
-      await new Promise((resolve) => {
-        setTimeout(resolve, retryDelay);
-      });
-      this.tryConnect();
-    }
+  onError(ws: WebSocket, err: any) {
+    console.log('[AutoWebSocket] Error', err);
+    this.tryConnect();
+  }
+
+  protected async retryDelay() {
+    // Insert delay after multiple consecutive failures
+    const retryDelay = Math.min(500 * Math.max(this.connectionAttempts - 1, 0), this.maxRetryDelay);
+    if (retryDelay === 0) return;
+
+    console.log(`[AutoWebSocket] Connecting in ${retryDelay}ms`);
+    return new Promise((resolve) => {
+      setTimeout(resolve, retryDelay);
+    });
+  }
+
+  protected async waitForConnect(ws: WebSocket) {
+    // Wait for open/error
+    await new Promise((resolve, reject) => {
+      ws.onopen = resolve;
+      ws.onerror = reject;
+    });
+    ws.onopen = null;
+    ws.onerror = null;
   }
 
   protected async tryConnect() {
     if (!this.keepAlive) return;
+    console.log('[AutoWebSocket] Trying connect', { attempts: this.connectionAttempts });
+
+    // This is a new connection attempt. Will reset to 0 in the onConnect listener
+    this.connectionAttempts++;
+
+    // Insert reconenct delay if there are consecutive failures
+    await this.retryDelay();
+
+    // Create new websocket instance
     const ws = new WebSocket(this.address);
-    ws.addEventListener('open', this.onConnect.bind(this, ws));
-    ws.addEventListener('close', this.onDisconnect.bind(this, ws));
+
+    // Wait for websocket open / error
+    await this.waitForConnect(ws).catch(this.tryConnect.bind(this));
+
+    // Setup listeners
+    ws.onerror = this.onError.bind(this, ws);
+    ws.onclose = this.onDisconnect.bind(this, ws);
+    // Fire onConnect listener manually as we've already had the 'open' event whilst `waitForConnect`
+    this.onConnect(ws);
   }
 
   /**
@@ -52,7 +85,7 @@ export class AutoWebSocket extends EventEmitter {
 
   async disconnect() {
     this.keepAlive = false;
-    this.ws.close();
+    this.ws?.close();
   }
 }
 

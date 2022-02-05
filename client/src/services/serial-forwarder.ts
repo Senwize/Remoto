@@ -36,7 +36,6 @@ export class SerialForwarder extends EventEmitter {
     // await this.connectWebSocket();
     await this.connectSerialPort();
     await this.aws.connect();
-    this.createPipe();
 
     console.log('[SerialForwarder] Initialized and started');
     this.state = State.Ready;
@@ -98,7 +97,7 @@ export class SerialForwarder extends EventEmitter {
     this.serialWriteable = port.writable;
     this.serialReadable = port.readable;
 
-    // Set the port
+    // Set the portcreatePipe
     this.serialPort = port;
   }
 
