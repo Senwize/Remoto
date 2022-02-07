@@ -76,6 +76,17 @@ export const Display = ({ client, withControl }: Props) => {
       );
     }
 
+    function onResize() {
+      if (!containerRef.current) return;
+      // Set width / height
+      const width = containerRef.current.offsetWidth;
+      const widthScale = width / 1920;
+      const height = containerRef.current.offsetHeight;
+      const heightScale = height / 1080;
+      console.log(`[Display] Container size ${width}x${height} scaling ${widthScale}x${heightScale}`);
+      display.scale(Math.min(widthScale, heightScale));
+    }
+
     // Fired when the remote desktop is ready to be used
     if (!containerRef.current || !client) return;
     console.log('[Display] rendering new client');
@@ -85,7 +96,9 @@ export const Display = ({ client, withControl }: Props) => {
     const displayEl = display.getElement();
     containerRef.current.replaceChildren(displayEl);
     displayEl.focus();
-    display.scale(0.9);
+
+    onResize();
+    window.addEventListener('resize', onResize);
 
     // Mount handlers
     if (withControl === true) {
@@ -96,6 +109,7 @@ export const Display = ({ client, withControl }: Props) => {
 
     return () => {
       // TODO: unmount handlers
+      window.removeEventListener('resize', onResize);
     };
   }, [client]);
 

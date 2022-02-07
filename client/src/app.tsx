@@ -23,6 +23,8 @@ export const App = () => {
   const [buttonText, setButtonText] = useState('Connect');
 
   useEffect(() => {
+    if (state === State.Ready) return;
+
     function keyHandler(e: KeyboardEvent) {
       if (e.ctrlKey) {
         setButtonText('Connect with control');
@@ -45,7 +47,7 @@ export const App = () => {
       document.removeEventListener('keydown', keyHandler);
       document.removeEventListener('keyup', keyHandler);
     };
-  }, []);
+  }, [state]);
 
   useEffect(() => {
     function reset() {
@@ -109,7 +111,7 @@ export const App = () => {
 
   return (
     <>
-      <ConnectButton state={state} onClick={onConnectClick} text={buttonText} />
+      {state !== State.Disconnected ? null : <ConnectButton state={state} onClick={onConnectClick} text={buttonText} />}
       <Display client={client} withControl={control !== ControlState.ViewOnly} />
     </>
   );
