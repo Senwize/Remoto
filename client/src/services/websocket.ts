@@ -54,7 +54,7 @@ export class AutoWebSocket extends EventEmitter {
 
   protected async tryConnect() {
     if (!this.keepAlive) return;
-    console.log('[AutoWebSocket] Trying connect', { attempts: this.connectionAttempts });
+    console.log('[AutoWebSocket] Trying connect to ', this.address, { attempts: this.connectionAttempts });
 
     // This is a new connection attempt. Will reset to 0 in the onConnect listener
     this.connectionAttempts++;

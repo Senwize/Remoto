@@ -25,7 +25,7 @@ func main() {
 	wd, _ := os.Getwd()
 	mux.Handle("/", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
 	mux.Handle("/websocket-tunnel", wsServer)
-	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket("3.121.200.48:5910"))
+	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket("18.196.196.34:5910"))
 
 	s := &http.Server{
 		Addr:           "0.0.0.0:8080",
@@ -54,7 +54,7 @@ func DemoDoConnect(request *http.Request) (guac.Tunnel, error) {
 	// config.Parameters["security"] = "any"
 
 	config.Protocol = "vnc"
-	config.Parameters["hostname"] = "3.121.200.48"
+	config.Parameters["hostname"] = "18.196.196.34"
 	config.Parameters["port"] = "5901"
 	config.Parameters["username"] = "ubuntu"
 	config.Parameters["password"] = "wachtwoord"
