@@ -10,10 +10,42 @@ import './styles/global.css';
 const forwarder = new SerialForwarder();
 const remoteDesktop = new RemoteDesktop();
 
+enum ControlState {
+  ControlAndSerial,
+  ControlOnly,
+  ViewOnly,
+}
+
 export const App = () => {
   const [state, setState] = useState<State>(State.Disconnected);
-  const [withControl, setWithControl] = useState(false);
+  const [control, setControl] = useState(ControlState.ControlAndSerial);
   const [client, setClient] = useState<Guacamole.Client | undefined>(undefined);
+  const [buttonText, setButtonText] = useState('Connect');
+
+  useEffect(() => {
+    function keyHandler(e: KeyboardEvent) {
+      if (e.ctrlKey) {
+        setButtonText('Connect with control');
+        setControl(ControlState.ControlOnly);
+        return;
+      }
+      if (e.shiftKey) {
+        setButtonText('Connect view-only');
+        setControl(ControlState.ViewOnly);
+        return;
+      }
+      setButtonText('Connect');
+      setControl(ControlState.ControlAndSerial);
+    }
+
+    document.addEventListener('keydown', keyHandler);
+    document.addEventListener('keyup', keyHandler);
+
+    return () => {
+      document.removeEventListener('keydown', keyHandler);
+      document.removeEventListener('keyup', keyHandler);
+    };
+  }, []);
 
   useEffect(() => {
     function reset() {
@@ -49,19 +81,15 @@ export const App = () => {
   }, []);
 
   async function onConnectClick(e: any) {
-    const withControl = e.shiftKey !== true;
-
     setState(State.Connecting);
-    startConnect(withControl).catch(onConnectFailed);
-
-    setWithControl(withControl);
+    startConnect().catch(onConnectFailed);
   }
 
-  async function startConnect(withControl: boolean) {
+  async function startConnect() {
     // Initialize SerialForwarder
     // const forwarder = new SerialForwarder();
     // TODO: Add event listeners
-    if (withControl) {
+    if (control === ControlState.ControlAndSerial) {
       await forwarder.connect();
     }
 
@@ -81,8 +109,8 @@ export const App = () => {
 
   return (
     <>
-      <ConnectButton state={state} onClick={onConnectClick} />
-      <Display client={client} withControl={withControl} />
+      <ConnectButton state={state} onClick={onConnectClick} text={buttonText} />
+      <Display client={client} withControl={control !== ControlState.ViewOnly} />
     </>
   );
 };

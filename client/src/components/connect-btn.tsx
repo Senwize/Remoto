@@ -9,10 +9,11 @@ export enum State {
 
 interface Props {
   state: State;
+  text?: string;
   onClick?: (e: Event) => void;
 }
 
-export const ConnectButton = ({ state, onClick }: Props) => {
+export const ConnectButton = ({ state, text, onClick }: Props) => {
   switch (state) {
     case State.Disconnected:
       return (
@@ -20,7 +21,7 @@ export const ConnectButton = ({ state, onClick }: Props) => {
           className='absolute left-1/2 -translate-x-1/2 flex justify-center items-center px-6 py-3 rounded-b-md bg-green-500 hover:bg-green-600 text-white font-bold cursor-pointer'
           onClick={onClick}
         >
-          Connect
+          {text || 'Connect'}
         </div>
       );
 
