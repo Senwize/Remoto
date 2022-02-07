@@ -13,7 +13,8 @@ enum State {
 export class SerialForwarder extends EventEmitter {
   protected state = State.Disconnected;
   // Websocket connection to serial broker
-  protected aws = new AutoWebSocket(`ws://${location.host}/websocket-serial`);
+  protected readonly protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  protected aws = new AutoWebSocket(`${this.protocol}//${location.host}/websocket-serial`);
   protected ws?: WebSocket;
   // SerialPort to the Pico
   protected serialPort?: SerialPort;
