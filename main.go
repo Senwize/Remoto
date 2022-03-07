@@ -12,6 +12,18 @@ import (
 	"remoto.senwize.com/serialbroker"
 )
 
+var (
+	GUACD_ADDR = or(os.Getenv("GUACD_ADDR"), "http://guacd.remoto.local:4822")
+	HOST_ADDR  = or(os.Getenv("HOST_ADDR"), "0.0.0.0:8080")
+)
+
+func or(a, b string) string {
+	if a == "" {
+		return b
+	}
+	return a
+}
+
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
@@ -28,7 +40,7 @@ func main() {
 	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket("18.196.196.34:5910"))
 
 	s := &http.Server{
-		Addr:           "0.0.0.0:8080",
+		Addr:           HOST_ADDR,
 		Handler:        mux,
 		ReadTimeout:    guac.SocketTimeout,
 		WriteTimeout:   guac.SocketTimeout,
@@ -66,7 +78,7 @@ func DemoDoConnect(request *http.Request) (guac.Tunnel, error) {
 	config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
 
 	logrus.Debug("Connecting to guacd")
-	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:4822")
+	addr, _ := net.ResolveTCPAddr("tcp", GUACD_ADDR)
 
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
