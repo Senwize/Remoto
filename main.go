@@ -9,8 +9,21 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/wwt/guac"
-	"remoto.senwize.com/serialbroker"
+	"remoto.senwize.com/internal/serialbroker"
 )
+
+/*
+
+	- Discovery service
+			Uses DNS ip to find the guacd address
+			Uses the ip to find the VM addresses
+	- Login service
+			Groups can login by supplying a workshop_id and a groupname.
+			The workshop id is set as environment variable.
+			The groupname can be anything and will be the key
+	- Tunnel service
+			Establishes VM connections using guacd
+*/
 
 var (
 	GUACD_ADDR = or(os.Getenv("GUACD_ADDR"), "http://guacd.remoto.local:4822")
@@ -28,7 +41,6 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	wsServer := guac.NewWebsocketServer(DemoDoConnect)
-
 	sessions := guac.NewMemorySessionStore()
 	wsServer.OnConnect = sessions.Add
 	wsServer.OnDisconnect = sessions.Delete
