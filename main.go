@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/wwt/guac"
+	"remoto.senwize.com/cmd"
 	"remoto.senwize.com/internal/serialbroker"
 )
 
@@ -38,6 +39,9 @@ func or(a, b string) string {
 }
 
 func main() {
+	cmd.Execute()
+	return
+
 	logrus.SetLevel(logrus.DebugLevel)
 
 	wsServer := guac.NewWebsocketServer(DemoDoConnect)
