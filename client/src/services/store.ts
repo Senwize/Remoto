@@ -14,7 +14,8 @@ export interface Session {
 }
 
 export interface Sandbox {
-  id: string;
+  ip: string;
+  sessionID: string;
 }
 
 export interface AdminData {

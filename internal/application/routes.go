@@ -125,11 +125,12 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 	type sessionDTO struct {
 		ID         string `json:"id"`
 		Groupname  string `json:"groupName"`
-		SandboxIP  string `json:"sandboxIP"`
+		SandboxIP  string `json:"sandboxIP,omitempty"`
 		LastActive int64  `json:"lastActive"`
 	}
 	type sandboxDTO struct {
-		IP string `json:"ip"`
+		IP        string `json:"ip"`
+		SessionID string `json:"sessionID,omitempty"`
 	}
 	type response struct {
 		Sessions  []sessionDTO `json:"sessions"`
@@ -139,6 +140,9 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 		// Create session dto list
 		sessions := a.sessions.List()
 		dtoSessions := make([]sessionDTO, len(sessions))
+		sandboxSessionMap := make(map[string]string)
+
+		// Iterate sessions
 		for i, session := range sessions {
 			dto := sessionDTO{
 				ID:         session.ID,
@@ -148,6 +152,7 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 
 			if session.Sandbox != nil {
 				dto.SandboxIP = session.Sandbox.IP.String()
+				sandboxSessionMap[session.Sandbox.IP.String()] = session.GroupName
 			}
 
 			dtoSessions[i] = dto
@@ -158,7 +163,8 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 		dtoSandboxes := make([]sandboxDTO, len(sandboxes))
 		for i, sandbox := range sandboxes {
 			dtoSandboxes[i] = sandboxDTO{
-				IP: sandbox.IP.String(),
+				IP:        sandbox.IP.String(),
+				SessionID: sandboxSessionMap[sandbox.IP.String()],
 			}
 		}
 

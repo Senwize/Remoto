@@ -2,6 +2,7 @@ import { SessionsTable } from './sessionsTable';
 import { h, Fragment } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { useStore } from '../../services/store';
+import { SandboxTable } from './sandboxTable';
 
 export const AdminPage = () => {
   const fetchAdminSummary = useStore((state) => state.fetchAdminSummary);
@@ -32,6 +33,7 @@ export const AdminPage = () => {
 
         <div className='w-1/3 min-h-[16rem]'>
           <h2 className='text-xl border-b'>Sandboxes</h2>
+          <SandboxTable />
         </div>
 
         <div className='w-1/3 min-h-[16rem]'>
