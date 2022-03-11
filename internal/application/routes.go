@@ -142,7 +142,7 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 		for i, session := range sessions {
 			dtoSessions[i] = sessionDTO{
 				ID:         session.ID,
-				Groupname:  session.Groupname,
+				Groupname:  session.GroupName,
 				SandboxIP:  session.Sandbox.IP.String(),
 				LastActive: session.LastActive.Unix(),
 			}
@@ -247,13 +247,13 @@ func setCookie(rw http.ResponseWriter, cookie, value string) {
 }
 
 type SessionDTO struct {
-	Groupname string `json:"groupname,omitempty"`
+	GroupName string `json:"groupName,omitempty"`
 	IsAdmin   bool   `json:"isAdmin,omitempty"`
 }
 
 func sessionToDTO(session *Session) *SessionDTO {
 	return &SessionDTO{
-		Groupname: session.Groupname,
+		GroupName: session.GroupName,
 		IsAdmin:   session.IsAdmin,
 	}
 }

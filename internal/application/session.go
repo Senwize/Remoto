@@ -21,7 +21,7 @@ var (
 // Session ...
 type Session struct {
 	ID         string
-	Groupname  string
+	GroupName  string
 	IsAdmin    bool
 	Sandbox    *sandbox.Sandbox
 	LastActive time.Time
@@ -50,7 +50,7 @@ func (s *SessionService) Create() *Session {
 	id := createRandomString(SESSION_ID_LENGTH)
 	session := &Session{
 		ID:         id,
-		Groupname:  s.generateName(),
+		GroupName:  s.generateName(),
 		LastActive: time.Now(),
 	}
 	s.store[id] = session
@@ -72,7 +72,7 @@ func (s *SessionService) List() []Session {
 
 func (s *SessionService) nameExists(name string) bool {
 	for _, session := range s.store {
-		if session.Groupname == name {
+		if session.GroupName == name {
 			return true
 		}
 	}

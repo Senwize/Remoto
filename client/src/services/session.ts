@@ -1,13 +1,16 @@
 import createStore from 'zustand';
 import { combine } from 'zustand/middleware';
 
+interface SessionData {
+  groupName: string;
+  isAdmin: boolean;
+}
+
 export const useSession = createStore(
   combine(
     // Initial state
     {
-      hasSession: null as boolean | null,
-      isAdmin: false,
-      groupname: '',
+      session: undefined as SessionData | null | undefined,
     },
     // Functions
     (set) => ({
@@ -16,12 +19,12 @@ export const useSession = createStore(
 
         // Check if an active session exists
         if (!res.ok) {
-          set({ hasSession: false });
+          set({ session: null });
           return;
         }
 
-        const data = await res.json();
-        set({ ...data, hasSession: true });
+        const session = await res.json();
+        set({ session });
       },
 
       startSession: async (workshopCode: string) => {
@@ -40,8 +43,8 @@ export const useSession = createStore(
           throw new Error(data.message);
         }
 
-        const data = await res.json();
-        set({ ...data, hasSession: true });
+        const session = await res.json();
+        set({ session });
 
         return;
       },
