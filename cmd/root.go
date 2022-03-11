@@ -32,6 +32,7 @@ func serveCommand() *cobra.Command {
 				GuacdFQDN:    cfg.GuacdFQDN,
 				SandboxFQDN:  cfg.SandboxFQDN,
 				WorkshopCode: cfg.WorkshopCode,
+				AdminCode:    cfg.AdminCode,
 			})
 
 			app.Serve(cfg.HTTPAddr)
@@ -49,6 +50,7 @@ type config struct {
 	SandboxFQDN  string
 	HTTPAddr     string
 	WorkshopCode string
+	AdminCode    string
 }
 
 func env(key, defaultValue string) string {
@@ -64,5 +66,6 @@ func loadConfig() *config {
 		SandboxFQDN:  env("REMOTO_SANDBOX_FQDN", "sandbox.remoto.local"),
 		HTTPAddr:     env("REMOTO_HTTP_ADDR", ":3000"),
 		WorkshopCode: env("REMOTO_WORKSHOP_CODE", "demo"),
+		AdminCode:    env("REMOTO_ADMIN_CODE", "admin"),
 	}
 }

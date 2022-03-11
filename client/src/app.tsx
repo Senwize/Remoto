@@ -1,16 +1,18 @@
 import { h, Fragment, render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { AdminPage } from './pages/admin';
 import LoginPage from './pages/login';
 import { Viewer } from './pages/viewer';
-import { Server } from './services/server';
 import { useSession } from './services/session';
 import './styles/global.css';
 
 const App = () => {
+  const validateSession = useSession((s) => s.validateSession);
   const hasSession = useSession((s) => s.hasSession);
+  const isAdmin = useSession((s) => s.isAdmin);
 
   useEffect(() => {
-    Server.validateSession();
+    validateSession();
   }, []);
 
   if (hasSession === null) {
@@ -19,6 +21,10 @@ const App = () => {
 
   if (!hasSession) {
     return <LoginPage />;
+  }
+
+  if (isAdmin) {
+    return <AdminPage />;
   }
 
   return <Viewer />;

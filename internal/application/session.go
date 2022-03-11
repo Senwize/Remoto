@@ -22,6 +22,7 @@ var (
 type Session struct {
 	ID         string
 	Groupname  string
+	IsAdmin    bool
 	Sandbox    *sandbox.Sandbox
 	LastActive time.Time
 }

@@ -24,6 +24,7 @@ type Application struct {
 	sessions  *SessionService
 
 	workshopCode string
+	adminCode    string
 	done         chan struct{}
 }
 
@@ -32,6 +33,7 @@ type Config struct {
 	GuacdFQDN    string
 	SandboxFQDN  string
 	WorkshopCode string
+	AdminCode    string
 }
 
 func New(cfg Config) *Application {
@@ -42,6 +44,7 @@ func New(cfg Config) *Application {
 		sessions:     newSessionService(),
 		done:         make(chan struct{}),
 		workshopCode: cfg.WorkshopCode,
+		adminCode:    cfg.AdminCode,
 	}
 
 	// Register http routes

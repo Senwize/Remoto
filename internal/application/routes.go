@@ -3,8 +3,6 @@ package application
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -46,9 +44,7 @@ func (a *Application) httpListSandboxes() http.HandlerFunc {
 }
 
 func (a *Application) httpGetSession() http.HandlerFunc {
-	type response struct {
-		Groupname string `json:"groupname,omitempty"`
-	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := getSession(r.Context())
 
@@ -58,10 +54,10 @@ func (a *Application) httpGetSession() http.HandlerFunc {
 			return
 		}
 
+		dto := sessionToDTO(session)
+
 		// Return session
-		httpResponse(w, http.StatusOK, response{
-			Groupname: session.Groupname,
-		})
+		httpResponse(w, http.StatusOK, dto)
 	}
 }
 
@@ -69,13 +65,21 @@ func (a *Application) httpCreateSession() http.HandlerFunc {
 	type request struct {
 		WorkshopCode string `json:"workshop_code"`
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req request
 		if ok := httpReadBody(w, r, &req); !ok {
 			return
 		}
 
-		fmt.Printf("%+v, %v\n", req, a.workshopCode)
+		// If admin code then create admin session
+		if strings.EqualFold(req.WorkshopCode, a.adminCode) {
+			session := a.sessions.Create()
+			session.IsAdmin = true
+			setCookie(w, cookieSessionID, session.ID)
+			httpResponse(w, http.StatusOK, sessionToDTO(session))
+			return
+		}
 
 		// Validate workshop code
 		if !strings.EqualFold(req.WorkshopCode, a.workshopCode) {
@@ -94,8 +98,7 @@ func (a *Application) httpCreateSession() http.HandlerFunc {
 		session := a.sessions.Create()
 		session.Sandbox = sandbox
 		setCookie(w, cookieSessionID, session.ID)
-
-		log.Printf("Created session: %v for sandbox: %v", session.ID, sandbox.IP.String())
+		httpResponse(w, http.StatusOK, sessionToDTO(session))
 	}
 }
 
@@ -162,6 +165,41 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 	}
 }
 
+type middleware func(next http.Handler) http.Handler
+
+func (a *Application) sessionMiddleware() middleware {
+	return func(next http.Handler) http.Handler {
+		mw := func(rw http.ResponseWriter, r *http.Request) {
+			// Extract session
+			sessionID, err := r.Cookie(cookieSessionID)
+			if errors.Is(err, http.ErrNoCookie) {
+				next.ServeHTTP(rw, r)
+				return
+			}
+			if err != nil {
+				httpError(rw, err)
+				next.ServeHTTP(rw, r)
+				return
+			}
+
+			session := a.sessions.Get(sessionID.Value)
+			if session == nil {
+				deleteCookie(rw, cookieSessionID)
+				next.ServeHTTP(rw, r)
+				return
+			}
+
+			// Update session time
+			session.Touch()
+
+			r = r.WithContext(withSession(r.Context(), session))
+			next.ServeHTTP(rw, r)
+		}
+
+		return http.HandlerFunc(mw)
+	}
+}
+
 func httpError(w http.ResponseWriter, err error) {
 	httpResponse(w, http.StatusInternalServerError, map[string]string{"message": err.Error()})
 }
@@ -208,37 +246,14 @@ func setCookie(rw http.ResponseWriter, cookie, value string) {
 	})
 }
 
-type middleware func(next http.Handler) http.Handler
+type SessionDTO struct {
+	Groupname string `json:"groupname,omitempty"`
+	IsAdmin   bool   `json:"isAdmin,omitempty"`
+}
 
-func (a *Application) sessionMiddleware() middleware {
-	return func(next http.Handler) http.Handler {
-		mw := func(rw http.ResponseWriter, r *http.Request) {
-			// Extract session
-			sessionID, err := r.Cookie(cookieSessionID)
-			if errors.Is(err, http.ErrNoCookie) {
-				next.ServeHTTP(rw, r)
-				return
-			}
-			if err != nil {
-				httpError(rw, err)
-				next.ServeHTTP(rw, r)
-				return
-			}
-
-			session := a.sessions.Get(sessionID.Value)
-			if session == nil {
-				deleteCookie(rw, cookieSessionID)
-				next.ServeHTTP(rw, r)
-				return
-			}
-
-			// Update session time
-			session.Touch()
-
-			r = r.WithContext(withSession(r.Context(), session))
-			next.ServeHTTP(rw, r)
-		}
-
-		return http.HandlerFunc(mw)
+func sessionToDTO(session *Session) *SessionDTO {
+	return &SessionDTO{
+		Groupname: session.Groupname,
+		IsAdmin:   session.IsAdmin,
 	}
 }
