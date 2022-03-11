@@ -9,25 +9,22 @@ const compareSession = (a: Session, b: Session) => {
   return a.groupName.localeCompare(b.groupName);
 };
 
-const fmtLastActive = (lastActive?: number) => {
-  if (lastActive === undefined) {
-    return 'Unknown';
+const fmtLastActive = (secondsAgo?: number) => {
+  if (secondsAgo === undefined) {
+    return 'unknown';
   }
 
-  const relative = Math.floor(lastActive - Date.now() / 1000);
-  const relativeAbs = Math.abs(relative);
-
-  if (relativeAbs < 5) {
-    return 'Just now';
+  if (secondsAgo < 5) {
+    return 'just now';
   }
-  if (relativeAbs < 60) {
-    return fmt.format(relative, 'seconds');
+  if (secondsAgo < 60) {
+    return fmt.format(-secondsAgo, 'seconds');
   }
-  if (relativeAbs < 3600) {
-    return fmt.format(Math.round(relative / 60), 'minutes');
+  if (secondsAgo < 3600) {
+    return fmt.format(-Math.round(secondsAgo / 60), 'minutes');
   }
-  if (relativeAbs < 86400) {
-    return fmt.format(Math.round(relative / 3600), 'hours');
+  if (secondsAgo < 86400) {
+    return fmt.format(-Math.round(secondsAgo / 3600), 'hours');
   }
   return 'days';
 };
@@ -40,6 +37,8 @@ interface EntryProps {
 const Entry = ({ session, selected, onClick }: EntryProps) => {
   const { groupName, sandboxIP, lastActive } = session;
 
+  const secondsAgo = Math.abs(Math.floor(lastActive - Date.now() / 1000));
+
   return (
     <div
       className={`grid grid-cols-2 gap-x-2 p-2 cursor-pointer ${selected ? 'bg-green-200' : 'hover:bg-gray-100'}`}
@@ -48,7 +47,9 @@ const Entry = ({ session, selected, onClick }: EntryProps) => {
       <span className='text-xl font-light'>{groupName}</span>
       <span></span>
       <span className='text-sm'>{sandboxIP || 'No Sandbox'}</span>
-      <span className='text-right text-sm'>Active {fmtLastActive(lastActive)}</span>
+      <span className={`text-right text-sm ${secondsAgo > 60 ? 'text-red-600' : ''}`}>
+        Last seen {fmtLastActive(secondsAgo)}
+      </span>
     </div>
   );
 };
