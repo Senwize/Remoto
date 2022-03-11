@@ -27,16 +27,20 @@ const Entry = ({ sandbox, selected, onClick }: EntryProps) => {
 
 export const SandboxTable = () => {
   const sandboxes = useStore((state) => state.adminSummary?.sandboxes);
-  const [selectedSandbox, setSelectedSsandbox] = useState<Sandbox | null>(null);
+  const [selectedSandbox, setSelectedSandbox] = useState<Sandbox | null>(null);
+
+  function onEntryClick(sandbox: Sandbox) {
+    if (selectedSandbox === sandbox) {
+      setSelectedSandbox(null);
+      return;
+    }
+    setSelectedSandbox(sandbox);
+  }
 
   return (
     <div className='flex flex-col w-full'>
       {sandboxes?.sort(compareSandbox).map((sandbox) => (
-        <Entry
-          sandbox={sandbox}
-          selected={sandbox.ip === selectedSandbox?.ip}
-          onClick={() => setSelectedSsandbox(sandbox)}
-        />
+        <Entry sandbox={sandbox} selected={sandbox.ip === selectedSandbox?.ip} onClick={() => onEntryClick(sandbox)} />
       ))}
     </div>
   );

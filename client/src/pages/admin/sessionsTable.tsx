@@ -57,14 +57,18 @@ export const SessionsTable = () => {
   const sessions = useStore((state) => state.adminSummary?.sessions);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
+  function onEntryClick(sandbox: Session) {
+    if (selectedSession === sandbox) {
+      setSelectedSession(null);
+      return;
+    }
+    setSelectedSession(sandbox);
+  }
+
   return (
     <div className='flex flex-col w-full'>
       {sessions?.sort(compareSession).map((session) => (
-        <Entry
-          session={session}
-          selected={session.id === selectedSession?.id}
-          onClick={() => setSelectedSession(session)}
-        />
+        <Entry session={session} selected={session.id === selectedSession?.id} onClick={() => onEntryClick(session)} />
       ))}
     </div>
   );
