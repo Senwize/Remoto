@@ -1,6 +1,6 @@
 import { createRef, h } from 'preact';
 import { useState } from 'preact/hooks';
-import { useSession } from '../services/session';
+import { useStore } from '../services/store';
 
 const PREVIOUS_WORKSHOPCODE = 'prev_workshop_code';
 
@@ -8,7 +8,7 @@ export default function LoginPage() {
   const errorTimeout = createRef();
   const [error, setError] = useState<string | null>(null);
   const [workshopCode, setWorkshopCode] = useState(localStorage.getItem(PREVIOUS_WORKSHOPCODE) ?? '');
-  const startSession = useSession((state) => state.startSession);
+  const startSession = useStore((state) => state.startSession);
 
   function displayError(err: Error) {
     if (errorTimeout.current) {

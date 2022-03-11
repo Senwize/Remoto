@@ -124,9 +124,9 @@ func (a *Application) httpDeleteSession() http.HandlerFunc {
 func (a *Application) httpAdminSummary() http.HandlerFunc {
 	type sessionDTO struct {
 		ID         string `json:"id"`
-		Groupname  string `json:"groupname"`
-		SandboxIP  string `json:"sandbox_ip"`
-		LastActive int64  `json:"last_active"`
+		Groupname  string `json:"groupName"`
+		SandboxIP  string `json:"sandboxIP"`
+		LastActive int64  `json:"lastActive"`
 	}
 	type sandboxDTO struct {
 		IP string `json:"ip"`
@@ -140,12 +140,17 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 		sessions := a.sessions.List()
 		dtoSessions := make([]sessionDTO, len(sessions))
 		for i, session := range sessions {
-			dtoSessions[i] = sessionDTO{
+			dto := sessionDTO{
 				ID:         session.ID,
 				Groupname:  session.GroupName,
-				SandboxIP:  session.Sandbox.IP.String(),
 				LastActive: session.LastActive.Unix(),
 			}
+
+			if session.Sandbox != nil {
+				dto.SandboxIP = session.Sandbox.IP.String()
+			}
+
+			dtoSessions[i] = dto
 		}
 
 		// Create sandbox dto list

@@ -3,12 +3,12 @@ import { useEffect } from 'preact/hooks';
 import { AdminPage } from './pages/admin';
 import LoginPage from './pages/login';
 import { Viewer } from './pages/viewer';
-import { useSession } from './services/session';
+import { useStore } from './services/store';
 import './styles/global.css';
 
 const App = () => {
-  const validateSession = useSession((s) => s.validateSession);
-  const session = useSession((s) => s.session);
+  const validateSession = useStore((s) => s.validateSession);
+  const session = useStore((s) => s.session);
 
   useEffect(() => {
     validateSession();
