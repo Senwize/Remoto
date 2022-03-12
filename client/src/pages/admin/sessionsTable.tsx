@@ -1,6 +1,7 @@
-import { h, Fragment } from 'preact';
-import { useState } from 'preact/hooks';
-import { Session, useStore } from '../../services/store';
+import { h } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
+import { useStore } from '../../services/store';
+import '@szhsin/react-menu/dist/core.css';
 
 const fmt = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 
@@ -35,8 +36,18 @@ interface EntryProps {
 }
 const Entry = ({ session, selected, onClick }: EntryProps) => {
   const { groupName, sandboxIP, lastActive } = session;
+  const [secondsAgo, setSecondsAgo] = useState<number>(Math.abs(Math.floor(lastActive - Date.now() / 1000)));
 
-  const secondsAgo = Math.abs(Math.floor(lastActive - Date.now() / 1000));
+  useEffect(() => {
+    const intervalID = setInterval(() => {
+      setSecondsAgo(Math.abs(Math.floor(lastActive - Date.now() / 1000)));
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      clearInterval(intervalID);
+    };
+  }, [lastActive]);
 
   return (
     <div
@@ -55,20 +66,17 @@ const Entry = ({ session, selected, onClick }: EntryProps) => {
 
 export const SessionsTable = () => {
   const sessions = useStore((state) => state.adminSummary?.sessions);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-
-  function onEntryClick(sandbox: Session) {
-    if (selectedSession === sandbox) {
-      setSelectedSession(null);
-      return;
-    }
-    setSelectedSession(sandbox);
-  }
+  const selectedSession = useStore((state) => state.selectedSession);
+  const selectSession = useStore((state) => state.selectSession);
 
   return (
     <div className='flex flex-col w-full'>
       {sessions?.sort(compareSession).map((session) => (
-        <Entry session={session} selected={session.id === selectedSession?.id} onClick={() => onEntryClick(session)} />
+        <Entry
+          session={session}
+          selected={session.id === selectedSession?.id}
+          onClick={() => (selectedSession?.id === session.id ? selectSession(null) : selectSession(session))}
+        />
       ))}
     </div>
   );

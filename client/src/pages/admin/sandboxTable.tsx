@@ -1,6 +1,5 @@
-import { h, Fragment } from 'preact';
-import { useState } from 'preact/hooks';
-import { Sandbox, useStore } from '../../services/store';
+import { h } from 'preact';
+import { useStore } from '../../services/store';
 
 const compareSandbox = (a: Sandbox, b: Sandbox) => {
   return a.ip.localeCompare(b.ip);
@@ -27,20 +26,17 @@ const Entry = ({ sandbox, selected, onClick }: EntryProps) => {
 
 export const SandboxTable = () => {
   const sandboxes = useStore((state) => state.adminSummary?.sandboxes);
-  const [selectedSandbox, setSelectedSandbox] = useState<Sandbox | null>(null);
-
-  function onEntryClick(sandbox: Sandbox) {
-    if (selectedSandbox === sandbox) {
-      setSelectedSandbox(null);
-      return;
-    }
-    setSelectedSandbox(sandbox);
-  }
+  const selectedSandbox = useStore((state) => state.selectedSandbox);
+  const selectSandbox = useStore((state) => state.selectSandbox);
 
   return (
     <div className='flex flex-col w-full'>
       {sandboxes?.sort(compareSandbox).map((sandbox) => (
-        <Entry sandbox={sandbox} selected={sandbox.ip === selectedSandbox?.ip} onClick={() => onEntryClick(sandbox)} />
+        <Entry
+          sandbox={sandbox}
+          selected={sandbox.ip === selectedSandbox?.ip}
+          onClick={() => (selectedSandbox?.ip === sandbox.ip ? selectSandbox(null) : selectSandbox(sandbox))}
+        />
       ))}
     </div>
   );
