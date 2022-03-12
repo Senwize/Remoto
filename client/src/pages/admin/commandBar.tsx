@@ -26,6 +26,7 @@ const Button = ({ value, baseColor, disabled = false, onClick }: ButtonProps) =>
 
 export const CommandBar = () => {
   const destroySession = useStore((state) => state.destroySession);
+  const assignSandbox = useStore((state) => state.assignSandbox);
 
   const session = useStore((state) => state.selectedSession);
   const sandbox = useStore((state) => state.selectedSandbox);
@@ -38,7 +39,12 @@ export const CommandBar = () => {
         disabled={session === null}
         onClick={() => session && destroySession(session.id)}
       />
-      <Button value='Set sandbox to session' baseColor='green' disabled={session === null || sandbox === null} />
+      <Button
+        value='Set sandbox to session'
+        baseColor='green'
+        disabled={session === null || sandbox === null}
+        onClick={() => session && sandbox && assignSandbox(session.id, sandbox.ip)}
+      />
     </div>
   );
 };

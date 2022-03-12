@@ -9,6 +9,7 @@ interface AdminState {
   selectSession(session: Session | null): void;
   selectSandbox(sandbox: Sandbox | null): void;
   destroySession(sessionID: string): void;
+  assignSandbox(sessionID: string, sandboxIP: string): void;
 }
 
 export const adminSlice: StateCreator<AdminState> = (set, get) => ({
@@ -57,9 +58,27 @@ export const adminSlice: StateCreator<AdminState> = (set, get) => ({
 
     if (!res.ok) {
       console.error(res);
+      return;
     }
 
     get().selectSession(null);
+    return get().fetchAdminSummary();
+  },
+
+  /**
+   *
+   */
+  async assignSandbox(sessionID, sandboxIP) {
+    const res = await fetch('/api/sessions/' + sessionID + '/sandbox', {
+      method: 'POST',
+      body: JSON.stringify({ sandboxIP }),
+    });
+
+    if (!res.ok) {
+      console.error(res);
+      return;
+    }
+
     return get().fetchAdminSummary();
   },
 });

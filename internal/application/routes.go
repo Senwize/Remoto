@@ -3,6 +3,7 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -25,6 +26,7 @@ func (a *Application) registerRoutes() {
 	r.Post("/api/sessions", a.httpCreateSession())
 	r.Delete("/api/sessions/{sessionID}", a.httpDeleteSession())
 	r.Get("/api/admin/summary", a.httpAdminSummary())
+	r.Post("/api/sessions/{sessionID}/sandbox", a.httpAssignSandbox())
 
 	wd, _ := os.Getwd()
 	r.Handle("/*", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
@@ -119,6 +121,30 @@ func (a *Application) httpDeleteSession() http.HandlerFunc {
 		a.sessions.Delete(sessionID)
 
 		httpResponse(w, http.StatusOK, map[string]string{"message": "session deleted"})
+	}
+}
+
+func (a *Application) httpAssignSandbox() http.HandlerFunc {
+	type request struct {
+		SandboxIP string `json:"sandboxIP,omitempty"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req request
+		if ok := httpReadBody(w, r, &req); !ok {
+			return
+		}
+
+		sessionID := chi.URLParam(r, "sessionID")
+
+		session := a.sessions.Get(sessionID)
+		sandbox, err := a.sandbox.Reserve(net.ParseIP(req.SandboxIP))
+		if err != nil {
+			httpError(w, err)
+			return
+		}
+
+		session.Sandbox = sandbox
+		httpResponse(w, http.StatusOK, map[string]string{"message": "Assigned"})
 	}
 }
 

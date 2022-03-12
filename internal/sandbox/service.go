@@ -14,8 +14,9 @@ import (
 */
 
 var (
-	ErrNoSandboxFree = errors.New("no sandbox free")
-	ErrNotFound      = errors.New("sandbox not found")
+	ErrNoSandboxFree   = errors.New("no sandbox free")
+	ErrNotFound        = errors.New("sandbox not found")
+	ErrSandboxReserved = errors.New("sandbox reserved")
 
 	KEY_LENGTH = 16
 )
@@ -60,6 +61,22 @@ func (s *Service) ReserveFree() (*Sandbox, error) {
 	return free, nil
 }
 
+func (s *Service) Reserve(ip net.IP) (*Sandbox, error) {
+	s.storeLock.Lock()
+	defer s.storeLock.Unlock()
+
+	if !s.exists(ip) {
+		return nil, ErrNotFound
+	}
+
+	sandbox := s.get(ip)
+	if sandbox.Reserved {
+		return nil, ErrSandboxReserved
+	}
+
+	return sandbox, nil
+}
+
 func (s *Service) Release(sandbox *Sandbox) {
 	sandbox.Reserved = false
 }
@@ -95,9 +112,6 @@ func (s *Service) getFree() *Sandbox {
 }
 
 func (s *Service) exists(ip net.IP) bool {
-	s.storeLock.Lock()
-	defer s.storeLock.Unlock()
-
 	for _, sandbox := range s.store {
 		if sandbox.IP.Equal(ip) {
 			return true
@@ -107,9 +121,6 @@ func (s *Service) exists(ip net.IP) bool {
 }
 
 func (s *Service) get(ip net.IP) *Sandbox {
-	s.storeLock.Lock()
-	defer s.storeLock.Unlock()
-
 	for _, sandbox := range s.store {
 		if sandbox.IP.Equal(ip) {
 			return &sandbox

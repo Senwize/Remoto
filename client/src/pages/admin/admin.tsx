@@ -10,7 +10,7 @@ export const AdminPage = () => {
 
   useEffect(() => {
     fetchAdminSummary();
-    const intervalID = setInterval(() => fetchAdminSummary(), 3000);
+    const intervalID = setInterval(() => fetchAdminSummary(), 5000);
 
     // Cleanup
     return () => {

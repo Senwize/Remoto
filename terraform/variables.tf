@@ -20,3 +20,18 @@ variable "image_guacd" {
   type    = string
   default = "756581103470.dkr.ecr.eu-central-1.amazonaws.com/guacd:latest"
 }
+
+variable "image_sandbox" {
+  type    = string
+  default = "traefik/whoami:latest"
+}
+
+variable "remoto_workshop_code" {
+  type    = string
+  default = "demo"
+}
+
+variable "remoto_admin_code" {
+  type    = string
+  default = "admin"
+}
