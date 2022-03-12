@@ -46,11 +46,15 @@ func (s *SessionService) Get(id string) *Session {
 	return s.store[id]
 }
 
-func (s *SessionService) Create() *Session {
+func (s *SessionService) Create(groupName string) *Session {
+	if groupName == "" {
+		groupName = s.generateName()
+	}
+
 	id := createRandomString(SESSION_ID_LENGTH)
 	session := &Session{
 		ID:         id,
-		GroupName:  s.generateName(),
+		GroupName:  groupName,
 		LastActive: time.Now(),
 	}
 	s.store[id] = session

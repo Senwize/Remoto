@@ -52,7 +52,7 @@ export const useStore = createStore(
        * Attempt to start a new session
        * @param workshopCode the code for the workshop
        */
-      startSession: async (workshopCode: string) => {
+      startSession: async (workshopCode: string, groupName: string = '') => {
         const res = await fetch('/api/sessions', {
           method: 'POST',
           headers: {
@@ -60,6 +60,7 @@ export const useStore = createStore(
           },
           body: JSON.stringify({
             workshop_code: workshopCode,
+            groupName,
           }),
         });
 

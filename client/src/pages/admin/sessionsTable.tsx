@@ -1,7 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { Session, useStore } from '../../services/store';
-import { usePopper } from 'react-popper';
 
 const fmt = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 

@@ -64,6 +64,7 @@ func (a *Application) httpGetSession() http.HandlerFunc {
 func (a *Application) httpCreateSession() http.HandlerFunc {
 	type request struct {
 		WorkshopCode string `json:"workshop_code"`
+		GroupName    string `json:"groupName,omitempty"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +75,7 @@ func (a *Application) httpCreateSession() http.HandlerFunc {
 
 		// If admin code then create admin session
 		if strings.EqualFold(req.WorkshopCode, a.adminCode) {
-			session := a.sessions.Create()
+			session := a.sessions.Create(req.GroupName)
 			session.IsAdmin = true
 			setCookie(w, cookieSessionID, session.ID)
 			httpResponse(w, http.StatusOK, sessionToDTO(session))
@@ -95,7 +96,7 @@ func (a *Application) httpCreateSession() http.HandlerFunc {
 		}
 
 		// Create new session
-		session := a.sessions.Create()
+		session := a.sessions.Create(req.GroupName)
 		session.Sandbox = sandbox
 		setCookie(w, cookieSessionID, session.ID)
 		httpResponse(w, http.StatusOK, sessionToDTO(session))

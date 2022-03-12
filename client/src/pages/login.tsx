@@ -3,11 +3,13 @@ import { useState } from 'preact/hooks';
 import { useStore } from '../services/store';
 
 const PREVIOUS_WORKSHOPCODE = 'prev_workshop_code';
+const PREVIOUS_GROUPNAME = 'prev_group_name';
 
 export default function LoginPage() {
   const errorTimeout = createRef();
   const [error, setError] = useState<string | null>(null);
   const [workshopCode, setWorkshopCode] = useState(localStorage.getItem(PREVIOUS_WORKSHOPCODE) ?? '');
+  const [groupName, setGroupName] = useState(localStorage.getItem(PREVIOUS_GROUPNAME) ?? '');
   const startSession = useStore((state) => state.startSession);
 
   function displayError(err: Error) {
@@ -26,9 +28,10 @@ export default function LoginPage() {
   function handleSubmit(e: any) {
     e.preventDefault();
 
-    startSession(workshopCode)
+    startSession(workshopCode, groupName)
       .then(() => {
         localStorage.setItem(PREVIOUS_WORKSHOPCODE, workshopCode);
+        localStorage.setItem(PREVIOUS_GROUPNAME, groupName);
       })
       .catch((err) => {
         displayError(err);
@@ -51,6 +54,20 @@ export default function LoginPage() {
             value={workshopCode}
             onChange={(e: any) => setWorkshopCode(e.target.value)}
             id='workshopcode'
+          />
+        </fieldset>
+        <fieldset className='py-2'>
+          <label className='text-gray-700' for='groupname'>
+            Group name
+          </label>
+          <p className='text-gray-500 text-sm'>Enter a fun group name</p>
+          <input
+            className='w-full p-2 border focus:outline-none'
+            type='text'
+            placeholder='Pikachu'
+            value={groupName}
+            onChange={(e: any) => setGroupName(e.target.value)}
+            id='groupname'
           />
         </fieldset>
         <input
