@@ -1,0 +1,42 @@
+version: '3.4'
+
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: sandbox.Dockerfile
+    environment:
+      VNC_RESOLUTION: '1920x1080'
+    hostname: sandbox.remoto.local
+    # ports: # password = headless
+    #   - '5901:5901'
+
+  guacd:
+    image: guacamole/guacd:1.4.0
+    hostname: guacd.remoto.local
+
+  remoto:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    command: ['reflex', '-r', '\.go', '-s', 'go', 'run', 'main.go', 'serve']
+    working_dir: /app
+    environment:
+      REMOTO_GUACD_FQDN: guacd.remoto.local
+      REMOTO_SANDBOX_FQDN: sandbox.remoto.local
+      REMOTO_HTTP_ADDR: 0.0.0.0:3000
+      REMOTO_WORKSHOP_CODE: demo
+      REMOTO_ADMIN_CODE: admin
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./:/app
+
+  remoto_client:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    command: ['npm', 'run', 'dev']
+    working_dir: /app/client
+    volumes:
+      - ./:/app

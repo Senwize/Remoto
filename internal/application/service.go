@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -12,8 +13,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/wwt/guac"
 	"remoto.senwize.com/internal/discovery"
 	"remoto.senwize.com/internal/sandbox"
+)
+
+var (
+	// Service names
+	DISCOVERY_GUACD   = "guacd"
+	DISCOVERY_SANDBOX = "sandbox"
 )
 
 // Application ...
@@ -53,8 +61,8 @@ func New(cfg Config) *Application {
 	// Setup discovery service
 	app.discovery.OnDiscover = app.onServiceDiscovered
 	app.discovery.OnLost = app.onServiceLost
-	app.discovery.Add(cfg.GuacdFQDN)
-	app.discovery.Add(cfg.SandboxFQDN)
+	app.discovery.Add(DISCOVERY_GUACD, cfg.GuacdFQDN)
+	app.discovery.Add(DISCOVERY_SANDBOX, cfg.SandboxFQDN)
 
 	return app
 }
@@ -113,10 +121,11 @@ func (a *Application) startServiceDiscovery() func() {
 
 func (a *Application) startHTTPServer(errC chan error, addr string) func() {
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      a,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		Addr:           addr,
+		Handler:        a,
+		WriteTimeout:   15 * time.Second,
+		ReadTimeout:    15 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	// HTTP server co-routine
@@ -137,12 +146,70 @@ func (a *Application) startHTTPServer(errC chan error, addr string) func() {
 	}
 }
 
-func (a *Application) onServiceDiscovered(fqdn string, ip net.IP) {
-	log.Printf("Service discovered: %s -> %s", fqdn, ip.String())
+func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
+	log.Printf("Guac WS connection...\n")
+
+	// Get session sandbox
+	session := getSession(r.Context())
+	if session == nil {
+		return nil, errors.New("cannot start guacamole tunnel without session")
+	}
+	ip := session.Sandbox.IP.To4().String()
+
+	// Setup tunnel configuration
+	config := guac.NewGuacamoleConfiguration()
+	config.Protocol = "vnc"
+	config.Parameters["hostname"] = ip
+	config.Parameters["port"] = "5901"
+	config.Parameters["username"] = "headless"
+	config.Parameters["password"] = "headless"
+	config.Parameters["ignore-cert"] = "true"
+	config.Parameters["security"] = "any"
+	config.OptimalScreenWidth = 1920
+	config.OptimalScreenHeight = 1080
+	config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
+
+	// Get GuacD IP
+	guacdIP := a.discovery.Get(DISCOVERY_GUACD)
+	if guacdIP == nil || len(guacdIP) == 0 {
+		return nil, errors.New("cannot start guacamole tunnel without guacd ip")
+	}
+
+	log.Printf("Connecting session (%s) to sandbox (%s) through guacd at (%s)\n", session.GroupName, config.Parameters["hostname"], guacdIP[0])
+
+	// Connect to GuacD
+	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: guacdIP[0], Port: 4822})
+	if err != nil {
+		fmt.Println("error while connecting to guacd", err)
+		return nil, err
+	}
+
+	// Create tunnel
+	stream := guac.NewStream(conn, guac.SocketTimeout)
+
+	// // Set ID
+	// config.ConnectionID = session.ID
+
+	err = stream.Handshake(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return guac.NewSimpleTunnel(stream), nil
+}
+
+func (a *Application) onServiceDiscovered(svc string, ip net.IP) {
+	log.Printf("Service discovered: %s -> %s", svc, ip.String())
+	if svc == DISCOVERY_GUACD {
+		return
+	}
 	a.sandbox.Add(ip)
 }
 
-func (a *Application) onServiceLost(fqdn string, ip net.IP) {
-	log.Printf("Service lost: %s -> %s", fqdn, ip.String())
+func (a *Application) onServiceLost(svc string, ip net.IP) {
+	log.Printf("Service lost: %s -> %s", svc, ip.String())
+	if svc == DISCOVERY_GUACD {
+		return
+	}
 	a.sandbox.Delete(ip)
 }

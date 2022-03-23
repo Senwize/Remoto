@@ -40,7 +40,7 @@ export class RemoteDesktop extends EventEmitter {
 
   async connect() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const tunnel = new WebSocketTunnel(`${protocol}//${location.host}/websocket-tunnel`);
+    const tunnel = new WebSocketTunnel(`${protocol}//${location.host}/api/ws/guacamole`);
     const client = new Client(tunnel);
 
     // Set

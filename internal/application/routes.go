@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/wwt/guac"
 )
 
 var (
@@ -27,6 +28,13 @@ func (a *Application) registerRoutes() {
 	r.Delete("/api/sessions/{sessionID}", a.httpDeleteSession())
 	r.Get("/api/admin/summary", a.httpAdminSummary())
 	r.Post("/api/sessions/{sessionID}/sandbox", a.httpAssignSandbox())
+
+	// Guacamole
+	wsServer := guac.NewWebsocketServer(a.onGuacConnect)
+	sessions := guac.NewMemorySessionStore()
+	wsServer.OnConnect = sessions.Add
+	wsServer.OnDisconnect = sessions.Delete
+	r.Handle("/api/ws/guacamole", wsServer)
 
 	wd, _ := os.Getwd()
 	r.Handle("/*", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))

@@ -8,38 +8,43 @@ import (
 
 // Service ...
 type Service struct {
-	svcLock sync.Locker
-	svcMap  map[string]ipList
+	svcLock   sync.Locker
+	ipMap     map[string]ipList
+	domainMap map[string]string
 
-	OnDiscover func(fqdn string, ip net.IP)
-	OnLost     func(fqdn string, ip net.IP)
+	OnDiscover func(domain string, ip net.IP)
+	OnLost     func(domain string, ip net.IP)
 }
 
 func New() *Service {
 	return &Service{
-		svcLock: &sync.Mutex{},
-		svcMap:  make(map[string]ipList),
+		svcLock:   &sync.Mutex{},
+		ipMap:     make(map[string]ipList),
+		domainMap: make(map[string]string),
 	}
 }
 
-func (s *Service) Add(fqdn string) {
+func (s *Service) Add(svc, domain string) {
 	s.svcLock.Lock()
 	defer s.svcLock.Unlock()
 
-	// Service already in discovery list
-	if _, exists := s.svcMap[fqdn]; exists {
+	if _, exists := s.domainMap[svc]; exists {
 		return
 	}
-	s.svcMap[fqdn] = ipList{}
+
+	// Register svc to domain
+	s.domainMap[svc] = domain
+	s.ipMap[svc] = ipList{}
 }
 
 func (s *Service) Refresh() {
 	s.svcLock.Lock()
 	defer s.svcLock.Unlock()
 
-	for fqdn := range s.svcMap {
-		// Find IPs for this FQDN
-		foundIPs, err := net.LookupIP(fqdn)
+	for svc := range s.ipMap {
+		// Find IPs for this Domain
+		domain := s.domainMap[svc]
+		foundIPs, err := net.LookupIP(domain)
 		if err != nil {
 			log.Printf("Error while refreshing service: %s", err)
 			continue
@@ -54,30 +59,30 @@ func (s *Service) Refresh() {
 		}
 
 		// Find new and lost IPs
-		newIPs := ips.Subtract(s.svcMap[fqdn])
-		lostIPs := s.svcMap[fqdn].Subtract(ips)
+		newIPs := ips.Subtract(s.ipMap[svc])
+		lostIPs := s.ipMap[svc].Subtract(ips)
 
 		// Update service map
-		s.svcMap[fqdn] = ips
+		s.ipMap[svc] = ips
 
 		// Call listeners
 		if s.OnDiscover != nil {
 			for _, ip := range newIPs {
-				s.OnDiscover(fqdn, ip)
+				s.OnDiscover(svc, ip)
 			}
 		}
 		if s.OnLost != nil {
 			for _, ip := range lostIPs {
-				s.OnLost(fqdn, ip)
+				s.OnLost(svc, ip)
 			}
 		}
 
 	}
 }
 
-func (s *Service) Get(fqdn string) []net.IP {
+func (s *Service) Get(svc string) []net.IP {
 	s.svcLock.Lock()
 	defer s.svcLock.Unlock()
 
-	return s.svcMap[fqdn]
+	return s.ipMap[svc]
 }
