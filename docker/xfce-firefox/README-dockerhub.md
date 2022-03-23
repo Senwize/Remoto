@@ -1,6 +1,6 @@
-# Headless Ubuntu/Xfce container with VNC/noVNC and Chromium Browser
+# Headless Ubuntu/Xfce container with VNC/noVNC and Firefox browser
 
-## accetto/ubuntu-vnc-xfce-chromium-g3
+## accetto/ubuntu-vnc-xfce-firefox-g3
 
 [Docker Hub][this-docker] - [Git Hub][this-github] - [Dockerfile][this-dockerfile] - [Full Readme][this-readme-full] - [Changelog][this-changelog] - [Project Readme][this-readme-project] - [Wiki][this-wiki] - [Discussions][this-discussions]
 
@@ -16,9 +16,13 @@
 
 **Tip:** This is the **short README** version for Docker Hub. There is also the [full-length README][this-readme-full] on GitHub.
 
+**Warning** about images with Firefox
+
+There is no single-process Firefox image in this repository and the multi-process mode is always enabled. Be aware, that multi-process requires larger shared memory (`/dev/shm`). At least 256MB is recommended. Please check the **Firefox multi-process** page in [this Wiki][that-wiki-firefox-multiprocess] for more information and the instructions, how to set the shared memory size in different scenarios.
+
 ***
 
-This repository contains Docker images based on [Ubuntu 20.04 LTS][docker-ubuntu] with [Xfce][xfce] desktop environment, [VNC][tigervnc]/[noVNC][novnc] servers for headless use and the current [Chromium][chromium] web browser.
+This repository contains Docker images based on [Ubuntu 20.04 LTS][docker-ubuntu] with [Xfce][xfce] desktop environment, [VNC][tigervnc]/[noVNC][novnc] servers for headless use and the current [Firefox][firefox] web browser.
 
 ### TL;DR
 
@@ -33,29 +37,16 @@ sudo apt-get update
 sudo apt --fix-broken install
 ```
 
-Sharing the audio device for video with sound (only Linux and Chromium):
-
-```shell
-docker run -it -P --rm \
-  --device /dev/snd:/dev/snd:rw \
-  --group-add audio \
-accetto/ubuntu-vnc-xfce-chromium-g3:latest
-```
-
 ### Table of contents
 
-- [Headless Ubuntu/Xfce container with VNC/noVNC and Chromium Browser](#headless-ubuntuxfce-container-with-vncnovnc-and-chromium-browser)
-  - [accetto/ubuntu-vnc-xfce-chromium-g3](#accettoubuntu-vnc-xfce-chromium-g3)
+- [Headless Ubuntu/Xfce container with VNC/noVNC and Firefox browser](#headless-ubuntuxfce-container-with-vncnovnc-and-firefox-browser)
+  - [accetto/ubuntu-vnc-xfce-firefox-g3](#accettoubuntu-vnc-xfce-firefox-g3)
     - [TL;DR](#tldr)
     - [Table of contents](#table-of-contents)
     - [Image tags](#image-tags)
     - [More information](#more-information)
 
-**Remark:** This image contains the current `Chromium Browser` version from the `Ubuntu 18.04 LTS` distribution. This is because the version for `Ubuntu 20.04 LTS` depends on `snap`, which is not working correctly in Docker at this time.
-
-**Attention:** The [Chromium Browser][chromium] in this image runs in the `--no-sandbox` mode. You should be aware of the implications. The image is intended for testing and development.
-
-This is the **third generation** (G3) of my headless images. The **second generation** (G2) of similar images is contained in the GitHub repositories [accetto/xubuntu-vnc][accetto-github-xubuntu-vnc] and [accetto/xubuntu-vnc-novnc][accetto-github-xubuntu-vnc-novnc]. The **first generation** (G1) of similar images is contained in the GitHub repository [accetto/ubuntu-vnc-xfce-chromium][accetto-github-ubuntu-vnc-xfce-chromium].
+This is the **third generation** (G3) of my headless images. The **second generation** (G2) of similar images is contained in the GitHub repositories [accetto/xubuntu-vnc][accetto-github-xubuntu-vnc] and [accetto/xubuntu-vnc-novnc][accetto-github-xubuntu-vnc-novnc]. The **first generation** (G1) of similar images is contained in the GitHub repositories [accetto/ubuntu-vnc-xfce-firefox][accetto-github-ubuntu-vnc-xfce-firefox] and [accetto/ubuntu-vnc-xfce-firefox-plus][accetto-github-ubuntu-vnc-xfce-firefox-plus].
 
 More information about the image generations can be found in the [project README][this-readme-project] file and in [Wiki][this-wiki].
 
@@ -71,7 +62,7 @@ The main features and components of the images in the default configuration are:
 - current version of [tini][tini] as the entry-point initial process (PID 1)
 - support for overriding both the container user account and its group
 - support of **version sticker** (see below)
-- current version of [Chromium Browser][chromium] open-source web browser (from the `Ubuntu 18.04 LTS` distribution)
+- current version of [Firefox][firefox] web browser and some additional **plus** features described below
 
 The history of notable changes is documented in the [CHANGELOG][this-changelog].
 
@@ -79,12 +70,17 @@ The history of notable changes is documented in the [CHANGELOG][this-changelog].
 
 ### Image tags
 
-The following image tag on Docker Hub is regularly rebuilt:
+The following image tags on Docker Hub are regularly rebuilt:
 
 - `latest` implements VNC and noVNC
 
     ![badge_latest_created][badge_latest_created]
     [![badge_latest_version-sticker][badge_latest_version-sticker]][link_latest_version-sticker-verbose]
+
+- `latest-plus` implements VNC/noVNC and Firefox plus features
+
+    ![badge_latest-plus_created][badge_latest-plus_created]
+    [![badge_latest-plus_version-sticker][badge_latest-plus_version-sticker]][link_latest-plus_version-sticker-verbose]
 
 Clicking on the version sticker badge reveals more information about the actual configuration of the image.
 
@@ -100,22 +96,27 @@ More information about these images can be found in the [full-length README][thi
 [this-discussions]: https://github.com/accetto/ubuntu-vnc-xfce-g3/discussions
 [this-github]: https://github.com/accetto/ubuntu-vnc-xfce-g3/
 [this-issues]: https://github.com/accetto/ubuntu-vnc-xfce-g3/issues
-[this-readme-full]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/xfce-chromium/README.md
+[this-readme-full]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/xfce-firefox/README.md
 [this-readme-project]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/README.md
 [this-wiki]: https://github.com/accetto/ubuntu-vnc-xfce-g3/wiki
 
+[that-readme-startup-help]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/xfce/README-dockerhub.md#startup-options-and-help
+
 <!-- Docker image specific -->
 
-[this-docker]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-chromium-g3/
-[this-dockerfile]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/Dockerfile.xfce.chromium
+[this-docker]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-firefox-g3/
+[this-dockerfile]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/Dockerfile.xfce.firefox
 
-[this-screenshot-container]: https://raw.githubusercontent.com/accetto/ubuntu-vnc-xfce-g3/master/docker/doc/images/ubuntu-vnc-xfce-chromium.jpg
+[this-screenshot-container]: https://raw.githubusercontent.com/accetto/ubuntu-vnc-xfce-g3/master/docker/doc/images/ubuntu-vnc-xfce-firefox-plus.jpg
 
 <!-- Previous generations -->
 
+[that-wiki-firefox-multiprocess]: https://github.com/accetto/xubuntu-vnc/wiki/Firefox-multiprocess
+
 [accetto-github-xubuntu-vnc]: https://github.com/accetto/xubuntu-vnc/
 [accetto-github-xubuntu-vnc-novnc]: https://github.com/accetto/xubuntu-vnc-novnc/
-[accetto-github-ubuntu-vnc-xfce-chromium]: https://github.com/accetto/ubuntu-vnc-xfce-chromium
+[accetto-github-ubuntu-vnc-xfce-firefox]: https://github.com/accetto/ubuntu-vnc-xfce-firefox
+[accetto-github-ubuntu-vnc-xfce-firefox-plus]: https://github.com/accetto/ubuntu-vnc-xfce-firefox-plus
 
 <!-- External links -->
 
@@ -135,7 +136,8 @@ More information about these images can be found in the [full-length README][thi
 [tini]: https://github.com/krallin/tini
 [xfce]: http://www.xfce.org
 
-[chromium]: https://www.chromium.org/Home
+[firefox]: https://www.mozilla.org
+[firefox-doc-preferences]: https://developer.mozilla.org/en-US/docs/Mozilla/Preferences/A_brief_guide_to_Mozilla_preferences
 
 <!-- github badges common -->
 
@@ -145,8 +147,8 @@ More information about these images can be found in the [full-length README][thi
 
 <!-- docker badges specific -->
 
-[badge-docker-pulls]: https://badgen.net/docker/pulls/accetto/ubuntu-vnc-xfce-chromium-g3?icon=docker&label=pulls
+[badge-docker-pulls]: https://badgen.net/docker/pulls/accetto/ubuntu-vnc-xfce-firefox-g3?icon=docker&label=pulls
 
-[badge-docker-stars]: https://badgen.net/docker/stars/accetto/ubuntu-vnc-xfce-chromium-g3?icon=docker&label=stars
+[badge-docker-stars]: https://badgen.net/docker/stars/accetto/ubuntu-vnc-xfce-firefox-g3?icon=docker&label=stars
 
 <!-- Appendix -->

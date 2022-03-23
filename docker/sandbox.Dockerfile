@@ -268,6 +268,22 @@ RUN \
 
 FROM ${ARG_MERGE_STAGE_BROWSER_BASE} as merge_stage_browser
 
+#######################
+### stage_vscode
+#######################
+
+FROM merge_stage_browser as stage_vscode
+ARG ARG_VSCODE_URL="https://az764295.vo.msecnd.net/stable/c722ca6c7eed3d7987c0d5c3df5c45f6b15e77d1/code_1.65.2-1646927742_amd64.deb"
+
+RUN \
+    --mount=type=cache,target=/var/cache/apt,from=stage_cache,source=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt,from=stage_cache,source=/var/lib/apt \
+    wget -q -O /tmp/vscode.deb $ARG_VSCODE_URL \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y ${ARG_APT_NO_RECOMMENDS:+--no-install-recommends} \
+        "/tmp/vscode.deb" \
+    && rm "/tmp/vscode.deb" \
+    && apt-mark hold code
+
 
 ###############
 ### FINAL STAGE

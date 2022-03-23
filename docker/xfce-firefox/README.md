@@ -1,6 +1,6 @@
-# Headless Ubuntu/Xfce container with VNC/noVNC and Chromium Browser
+# Headless Ubuntu/Xfce container with VNC/noVNC and Firefox browser
 
-## accetto/ubuntu-vnc-xfce-chromium-g3
+## accetto/ubuntu-vnc-xfce-firefox-g3
 
 [Docker Hub][this-docker] - [Git Hub][this-github] - [Dockerfile][this-dockerfile] - [Docker Readme][this-readme-dockerhub] - [Changelog][this-changelog] - [Project Readme][this-readme-project] - [Wiki][this-wiki] - [Discussions][this-discussions]
 
@@ -9,7 +9,15 @@
 ![badge-github-release][badge-github-release]
 ![badge-github-release-date][badge-github-release-date]
 
-This repository contains resources for building Docker images based on [Ubuntu 20.04 LTS][docker-ubuntu] with [Xfce][xfce] desktop environment, [VNC][tigervnc]/[noVNC][novnc] servers for headless use and the current [Chromium][chromium] web browser.
+***
+
+**Warning** about images with Firefox
+
+There is no single-process Firefox image in this repository and the multi-process mode is always enabled. Be aware, that multi-process requires larger shared memory (`/dev/shm`). At least 256MB is recommended. Please check the **Firefox multi-process** page in [this Wiki][that-wiki-firefox-multiprocess] for more information and the instructions, how to set the shared memory size in different scenarios.
+
+***
+
+This repository contains resources for building Docker images based on [Ubuntu 20.04 LTS][docker-ubuntu] with [Xfce][xfce] desktop environment, [VNC][tigervnc]/[noVNC][novnc] servers for headless use and the current [Firefox][firefox] web browser.
 
 ### TL;DR
 
@@ -28,8 +36,10 @@ The fastest way to build the images locally:
 
 ```shell
 ### PWD = project root
-./docker/hooks/build dev latest-chromium
-./docker/hooks/build dev vnc-chromium
+./docker/hooks/build dev latest-firefox
+./docker/hooks/build dev latest-firefox-plus
+./docker/hooks/build dev vnc-firefox
+./docker/hooks/build dev vnc-firefox-plus
 ### and so on
 ```
 
@@ -37,19 +47,10 @@ You can also use the provided helper script `builder.sh`, which can also publish
 
 Find more in the hook script `env.rc` and in [Wiki][this-wiki].
 
-Sharing the audio device for video with sound (only Linux and Chromium):
-
-```shell
-docker run -it -P --rm \
-  --device /dev/snd:/dev/snd:rw \
-  --group-add audio \
-accetto/ubuntu-vnc-xfce-chromium-g3:latest
-```
-
 ### Table of contents
 
-- [Headless Ubuntu/Xfce container with VNC/noVNC and Chromium Browser](#headless-ubuntuxfce-container-with-vncnovnc-and-chromium-browser)
-  - [accetto/ubuntu-vnc-xfce-chromium-g3](#accettoubuntu-vnc-xfce-chromium-g3)
+- [Headless Ubuntu/Xfce container with VNC/noVNC and Firefox browser](#headless-ubuntuxfce-container-with-vncnovnc-and-firefox-browser)
+  - [accetto/ubuntu-vnc-xfce-firefox-g3](#accettoubuntu-vnc-xfce-firefox-g3)
     - [TL;DR](#tldr)
     - [Table of contents](#table-of-contents)
     - [Image tags](#image-tags)
@@ -62,19 +63,18 @@ accetto/ubuntu-vnc-xfce-chromium-g3:latest
     - [Overriding container user parameters](#overriding-container-user-parameters)
   - [Running containers in background (detached)](#running-containers-in-background-detached)
   - [Running containers in foreground (interactively)](#running-containers-in-foreground-interactively)
+  - [Firefox multi-process](#firefox-multi-process)
+    - [Setting shared memory size](#setting-shared-memory-size)
+  - [Firefox preferences and the plus features](#firefox-preferences-and-the-plus-features)
   - [Startup options and help](#startup-options-and-help)
   - [Issues, Wiki and Discussions](#issues-wiki-and-discussions)
   - [Credits](#credits)
   - [Diagrams](#diagrams)
     - [Dockerfile.xfce](#dockerfilexfce)
 
-This is the **third generation** (G3) of my headless images. The **second generation** (G2) of similar images is contained in the GitHub repositories [accetto/xubuntu-vnc][accetto-github-xubuntu-vnc] and [accetto/xubuntu-vnc-novnc][accetto-github-xubuntu-vnc-novnc]. The **first generation** (G1) of similar images is contained in the GitHub repository [accetto/ubuntu-vnc-xfce-chromium][accetto-github-ubuntu-vnc-xfce-chromium].
+This is the **third generation** (G3) of my headless images. The **second generation** (G2) of similar images is contained in the GitHub repositories [accetto/xubuntu-vnc][accetto-github-xubuntu-vnc] and [accetto/xubuntu-vnc-novnc][accetto-github-xubuntu-vnc-novnc]. The **first generation** (G1) of similar images is contained in the GitHub repositories [accetto/ubuntu-vnc-xfce-firefox][accetto-github-ubuntu-vnc-xfce-firefox] and [accetto/ubuntu-vnc-xfce-firefox-plus][accetto-github-ubuntu-vnc-xfce-firefox-plus].
 
 More information about the image generations can be found in the [project README][this-readme-project] file and in [Wiki][this-wiki].
-
-**Remark:** This image contains the current `Chromium Browser` version from the `Ubuntu 18.04 LTS` distribution. This is because the version for `Ubuntu 20.04 LTS` depends on `snap`, which is not working correctly in Docker at this time.
-
-**Attention:** The [Chromium Browser][chromium] in this image runs in the `--no-sandbox` mode. You should be aware of the implications. The image is intended for testing and development.
 
 The main features and components of the images in the default configuration are:
 
@@ -88,7 +88,7 @@ The main features and components of the images in the default configuration are:
 - current version of [tini][tini] as the entry-point initial process (PID 1)
 - support for overriding both the container user account and its group
 - support of **version sticker** (see below)
-- current version of [Chromium Browser][chromium] open-source web browser (from the `Ubuntu 18.04 LTS` distribution)
+- current version of [Firefox][firefox] web browser and some additional **plus** features described below
 
 The history of notable changes is documented in the [CHANGELOG][this-changelog].
 
@@ -96,9 +96,10 @@ The history of notable changes is documented in the [CHANGELOG][this-changelog].
 
 ### Image tags
 
-The following image tag on Docker Hub is regularly rebuilt:
+The following image tags on Docker Hub are regularly rebuilt:
 
 - `latest` implements VNC and noVNC
+- `latest-plus` implements VNC/noVNC and Firefox plus features
 
 Clicking on the version sticker badge in the [README on Docker Hub][this-readme-dockerhub] reveals more information about the actual configuration of the image.
 
@@ -326,25 +327,25 @@ Note that only numerical `ID:GID` values are supported. Please check the Docker 
 The following container will keep running in the background and it will listen on an automatically selected TCP port on the host computer:
 
 ```shell
-docker run -d -P accetto/ubuntu-vnc-xfce-chromium-g3:latest
+docker run -dP accetto/ubuntu-vnc-xfce-firefox-g3:latest
 ```
 
 The following container will listen on the host's TCP port **25901**:
 
 ```shell
-docker run -d -p 25901:5901 accetto/ubuntu-vnc-xfce-chromium-g3:latest
+docker run -d -p 25901:5901 accetto/ubuntu-vnc-xfce-firefox-g3:latest
 ```
 
 The following container will create (or re-use) the local named volume **my\_Downloads** mounted as `/home/headless/Downloads`:
 
 ```shell
-docker run -d -P -v my_Downloads:/home/headless/Downloads accetto/ubuntu-vnc-xfce-chromium-g3:latest
+docker run -d -P -v my_Downloads:/home/headless/Downloads accetto/ubuntu-vnc-xfce-firefox-g3:latest
 ```
 
 or using the newer syntax with **--mount** flag:
 
 ```shell
-docker run -d -P --mount source=my_Downloads,target=/home/headless/Downloads accetto/ubuntu-vnc-xfce-chromium-g3:latest
+docker run -d -P --mount source=my_Downloads,target=/home/headless/Downloads accetto/ubuntu-vnc-xfce-firefox-g3:latest
 ```
 
 ## Running containers in foreground (interactively)
@@ -352,7 +353,7 @@ docker run -d -P --mount source=my_Downloads,target=/home/headless/Downloads acc
 The following container can be used interactively:
 
 ```shell
-docker run -it --rm accetto/ubuntu-vnc-xfce-chromium-g3:latest bash
+docker run -it --rm accetto/ubuntu-vnc-xfce-firefox-g3:latest bash
 ```
 
 The opened `bash` session can be used as usual and then closed by entering `^C` (CTRL-C):
@@ -370,6 +371,64 @@ headless@cf4a4e01d94b:~$
 
 The container will remove itself.
 
+## Firefox multi-process
+
+Firefox multi-process (also known as **Electrolysis** or just **E10S**) can cause heavy crashing in Docker containers if there is not enough shared memory (**Gah. Your tab just crashed.**).
+
+In Firefox versions till **76.0.1** it has been possible to disable multi-process by setting the environment variable **MOZ_FORCE_DISABLE_E10S**. However, in Firefox **77.0.1** it has caused ugly scrambling of almost all web pages, because they were not decompressed.
+
+Mozilla has fixed the problem in the next release, but they warned about not supporting the switch in the future. That is why I've decided, that all images with Firefox will use multi-process by default, even if it requires larger shared memory. On the positive side, performance should be higher and Internet browsing should be sand-boxed.
+
+Please check the Wiki page [Firefox multi-process][that-wiki-firefox-multiprocess] for more information and the instructions, how the shared memory size can be set in different scenarios.
+
+### Setting shared memory size
+
+Instability of multi-process Firefox is caused by setting the shared memory size too low. Docker assigns only **64MB** by default. Testing on my computers has shown, that using at least **256MB** completely eliminates the problem. However, it could be different on your system.
+
+The Wiki page [Firefox multi-process][that-wiki-firefox-multiprocess] describes several ways, how to increase the shared memory size. It's really simple, if you need it for a single container started from the command line.
+
+For example, the following container will have its shared memory size set to 256MB:
+
+```shell
+docker run -d -P --shm-size=256m accetto/ubuntu-vnc-xfce-firefox-g3:latest
+```
+
+You can check the current shared memory size by executing the following command inside the container:
+
+```shell
+df -h /dev/shm
+```
+
+## Firefox preferences and the plus features
+
+Firefox browser supports pre-configuration of user preferences.
+
+Users can enforce their personal browser preferences if they put them into the `user.js` file and then copy it into the Firefox profile folder. The provided **plus** features make it really easy.
+
+There is the `/home/headless/firefox.plus` folder containing the `user.js` file and the helper utility `copy_firefox_user_preferences.sh`. It will copy the `user.js` file into one or more existing Firefox profiles. The utility is easy to use, because it is interactive and it will also display the help, if started with the `-h` or `--help` argument.
+
+To make it even more convenient, there are also desktop launchers for the utility and for the **Firefox Profile Manager**.
+
+Recommended procedure for taking advantage of the **plus** features is:
+
+- Start the **Firefox Profile Manager** using the desktop launcher **FF Profile Manager**. Create a new Firefox profile if there is none or you want to add one more. Wait until the profile is created and then start Firefox with it. Starting Firefox is required to create the actual profile content.
+  
+  **Hint**: You can also check the **Work offline** check-box before creating the profile.
+
+  The Firefox profiles are created inside the `/home/headless/.mozilla/firefox` folder by default. Note that the `.mozilla` folder is hidden.
+
+  Close the **Profile Manager** by pushing the **Exit** button.
+
+- Put your personal Firefox preferences into the `user.js` file which is in the `/home/headless/firefox.plus`folder. Check the Firefox documentation (e.g. [Firefox preferences][firefox-doc-preferences]) for more information about the syntax.  
+  
+  **Hint**: There is also another way. You can first start Firefox, configure it and then copy the content of the `prefs.js` file from the Firefox profile folder into the `user.js` file. Then you can check the content and to keep only the preferences you really want to enforce. It's not a quick task, but you have to do it only once or until you need an update.
+
+- Start the helper utility using the desktop launcher **Copy FF Preferences**. The utility will allow you to copy the `user.js` file to any of the existing Firefox profiles.  
+  
+  **Hint**: You preferences will be enforced until you delete the `user.js` file from the Firefox profile folder.
+
+It is also very easy to build customized images with pre-filled `user.js` files.
+
 ## Startup options and help
 
 The image supports multiple **start-up options** and **start-up modifiers**. There also also two help modes.
@@ -377,7 +436,7 @@ The image supports multiple **start-up options** and **start-up modifiers**. The
 The following container will print out the short help and then it will remove itself:
 
 ```shell
-docker run --rm accetto/ubuntu-vnc-xfce-chromium-g3:latest --help
+docker run --rm accetto/ubuntu-vnc-xfce-firefox-g3:latest --help
 ```
 
 Example of the short help text:
@@ -407,7 +466,7 @@ For more information visit https://github.com/accetto/ubuntu-vnc-xfce-g3
 The following container will print out the long help and then it will remove itself:
 
 ```shell
-docker run --rm accetto/ubuntu-vnc-xfce-chromium-g3:latest --help-usage
+docker run --rm accetto/ubuntu-vnc-xfce-firefox-g3:latest --help-usage
 ```
 
 Example of the long help text:
@@ -522,24 +581,27 @@ Credit goes to all the countless people and companies, who contribute to open so
 [this-discussions]: https://github.com/accetto/ubuntu-vnc-xfce-g3/discussions
 [this-github]: https://github.com/accetto/ubuntu-vnc-xfce-g3/
 [this-issues]: https://github.com/accetto/ubuntu-vnc-xfce-g3/issues
-[this-readme-dockerhub]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-chromium-g3
+[this-readme-dockerhub]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-firefox-g3
 [this-readme-project]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/README.md
 [this-wiki]: https://github.com/accetto/ubuntu-vnc-xfce-g3/wiki
 
 <!-- Docker image specific -->
 
-[this-docker]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-chromium-g3/
-[this-dockerfile]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/Dockerfile.xfce.chromium
+[this-docker]: https://hub.docker.com/r/accetto/ubuntu-vnc-xfce-firefox-g3/
+[this-dockerfile]: https://github.com/accetto/ubuntu-vnc-xfce-g3/blob/master/docker/Dockerfile.xfce.firefox
 
 [this-diagram-dockerfile-stages]: https://raw.githubusercontent.com/accetto/ubuntu-vnc-xfce-g3/master/docker/doc/images/Dockerfile.xfce.png
 
-[this-screenshot-container]: https://raw.githubusercontent.com/accetto/ubuntu-vnc-xfce-g3/master/docker/doc/images/ubuntu-vnc-xfce-chromium.jpg
+[this-screenshot-container]: https://raw.githubusercontent.com/accetto/ubuntu-vnc-xfce-g3/master/docker/doc/images/ubuntu-vnc-xfce-firefox-plus.jpg
 
 <!-- Previous generations -->
 
+[that-wiki-firefox-multiprocess]: https://github.com/accetto/xubuntu-vnc/wiki/Firefox-multiprocess
+
 [accetto-github-xubuntu-vnc]: https://github.com/accetto/xubuntu-vnc/
 [accetto-github-xubuntu-vnc-novnc]: https://github.com/accetto/xubuntu-vnc-novnc/
-[accetto-github-ubuntu-vnc-xfce-chromium]: https://github.com/accetto/ubuntu-vnc-xfce-chromium
+[accetto-github-ubuntu-vnc-xfce-firefox]: https://github.com/accetto/ubuntu-vnc-xfce-firefox
+[accetto-github-ubuntu-vnc-xfce-firefox-plus]: https://github.com/accetto/ubuntu-vnc-xfce-firefox-plus
 
 <!-- External links -->
 
@@ -559,7 +621,8 @@ Credit goes to all the countless people and companies, who contribute to open so
 [tini]: https://github.com/krallin/tini
 [xfce]: http://www.xfce.org
 
-[chromium]: https://www.chromium.org/Home
+[firefox]: https://www.mozilla.org
+[firefox-doc-preferences]: https://developer.mozilla.org/en-US/docs/Mozilla/Preferences/A_brief_guide_to_Mozilla_preferences
 
 <!-- github badges common -->
 
@@ -569,6 +632,6 @@ Credit goes to all the countless people and companies, who contribute to open so
 
 <!-- docker badges specific -->
 
-[badge-docker-pulls]: https://badgen.net/docker/pulls/accetto/ubuntu-vnc-xfce-chromium-g3?icon=docker&label=pulls
+[badge-docker-pulls]: https://badgen.net/docker/pulls/accetto/ubuntu-vnc-xfce-firefox-g3?icon=docker&label=pulls
 
-[badge-docker-stars]: https://badgen.net/docker/stars/accetto/ubuntu-vnc-xfce-chromium-g3?icon=docker&label=stars
+[badge-docker-stars]: https://badgen.net/docker/stars/accetto/ubuntu-vnc-xfce-firefox-g3?icon=docker&label=stars

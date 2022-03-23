@@ -110,9 +110,9 @@ export const Viewer = () => {
   }
 
   return (
-    <>
+    <div className='overflow-hidden'>
       {state !== State.Disconnected ? null : <ConnectButton state={state} onClick={onConnectClick} text={buttonText} />}
       <Display client={client} withControl={control !== ControlState.ViewOnly} />
-    </>
+    </div>
   );
 };
