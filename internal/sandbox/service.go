@@ -73,6 +73,7 @@ func (s *Service) Reserve(ip net.IP) (*Sandbox, error) {
 	if sandbox.Reserved {
 		return nil, ErrSandboxReserved
 	}
+	sandbox.Reserved = true
 
 	return sandbox, nil
 }
@@ -94,26 +95,28 @@ func (s *Service) Delete(ip net.IP) {
 	s.storeLock.Lock()
 	defer s.storeLock.Unlock()
 
-	for i, sandbox := range s.store {
+	for ix := range s.store {
+		sandbox := &s.store[ix]
 		if sandbox.IP.Equal(ip) {
-			s.store[i] = s.store[len(s.store)-1]
+			s.store[ix] = s.store[len(s.store)-1]
 			s.store = s.store[:len(s.store)-1]
 		}
 	}
 }
 
 func (s *Service) getFree() *Sandbox {
-	for _, sandbox := range s.store {
+	for ix := range s.store {
+		sandbox := &s.store[ix]
 		if !sandbox.Reserved {
-			return &sandbox
+			return sandbox
 		}
 	}
 	return nil
 }
 
 func (s *Service) exists(ip net.IP) bool {
-	for _, sandbox := range s.store {
-		if sandbox.IP.Equal(ip) {
+	for ix := range s.store {
+		if s.store[ix].IP.Equal(ip) {
 			return true
 		}
 	}
@@ -121,9 +124,10 @@ func (s *Service) exists(ip net.IP) bool {
 }
 
 func (s *Service) get(ip net.IP) *Sandbox {
-	for _, sandbox := range s.store {
+	for ix := range s.store {
+		sandbox := &s.store[ix]
 		if sandbox.IP.Equal(ip) {
-			return &sandbox
+			return sandbox
 		}
 	}
 	return nil

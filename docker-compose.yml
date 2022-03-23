@@ -3,6 +3,7 @@ version: '3.4'
 services:
   sandbox:
     image: senwize/sandbox
+    scale: 3
     build:
       context: docker
       dockerfile: sandbox.Dockerfile
@@ -17,8 +18,6 @@ services:
         ARG_VNC_RESOLUTION: '1920x1080'
         ARG_VNC_COL_DEPTH: '16'
     privileged: true
-    environment:
-      VNC_RESOLUTION: '1920x1080'
     hostname: sandbox.remoto.local
     # ports: # password = headless
     #   - '5901:5901'
