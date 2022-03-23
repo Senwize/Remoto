@@ -2,9 +2,22 @@ version: '3.4'
 
 services:
   sandbox:
+    image: senwize/sandbox
     build:
-      context: .
+      context: docker
       dockerfile: sandbox.Dockerfile
+      args:
+        ARG_MERGE_STAGE_VNC_BASE: stage_vnc
+        ARG_MERGE_STAGE_BROWSER_BASE: stage_chromium
+        ARG_FINAL_STAGE_BASE: merge_stage_browser
+        ARG_HEADLESS_USER_NAME: workshop
+        ARG_SUDO_PW: workshop
+        ARG_VNC_PORT: 5901
+        ARG_VNC_PW: workshop
+        ARG_VNC_RESOLUTION: '1920x1080'
+        ARG_VNC_COL_DEPTH: '16'
+        ARG_CHROMIUM_VERSION: '99.0.4844.51-0ubuntu0.18.04.1'
+
     environment:
       VNC_RESOLUTION: '1920x1080'
     hostname: sandbox.remoto.local
@@ -18,7 +31,7 @@ services:
   remoto:
     build:
       context: .
-      dockerfile: dev.Dockerfile
+      dockerfile: docker/dev.Dockerfile
     command: ['reflex', '-r', '\.go', '-s', 'go', 'run', 'main.go', 'serve']
     working_dir: /app
     environment:
@@ -35,7 +48,7 @@ services:
   remoto_client:
     build:
       context: .
-      dockerfile: dev.Dockerfile
+      dockerfile: docker/dev.Dockerfile
     command: ['npm', 'run', 'dev']
     working_dir: /app/client
     volumes:

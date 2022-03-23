@@ -161,8 +161,8 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 	config.Protocol = "vnc"
 	config.Parameters["hostname"] = ip
 	config.Parameters["port"] = "5901"
-	config.Parameters["username"] = "headless"
-	config.Parameters["password"] = "headless"
+	config.Parameters["username"] = "workshop"
+	config.Parameters["password"] = "workshop"
 	config.Parameters["ignore-cert"] = "true"
 	config.Parameters["security"] = "any"
 	config.OptimalScreenWidth = 1920
