@@ -3,3 +3,5 @@ provider "aws" {
   secret_key = var.aws_iam_secret
   region     = var.aws_region
 }
+
+provider "docker" {}

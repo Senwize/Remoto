@@ -23,7 +23,15 @@ variable "image_guacd" {
 
 variable "image_sandbox" {
   type    = string
-  default = "traefik/whoami:latest"
+  default = "756581103470.dkr.ecr.eu-central-1.amazonaws.com/sandbox:latest"
+}
+
+// Get latest using:
+//  aws ssm get-parameters --names /aws/service/ecs/optimized-ami/amazon-linux-2/recommended \
+//  | jq -r ' .Parameters[0].Value' | jq -r .image_id
+variable "ami_ecs" {
+  type    = string
+  default = "ami-0a8b8ef11f16a92dd"
 }
 
 variable "remoto_workshop_code" {
@@ -34,4 +42,18 @@ variable "remoto_workshop_code" {
 variable "remoto_admin_code" {
   type    = string
   default = "admin"
+}
+
+variable "remoto_sandbox_instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
+variable "remoto_sandbox_count" {
+  type    = number
+  default = 3
+}
+
+variable "ssh_pubkey" {
+  type = string
 }

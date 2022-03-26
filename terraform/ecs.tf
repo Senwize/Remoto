@@ -26,8 +26,8 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_cloudwatch_log_group" "remoto-control" {
-  name              = "remoto-control"
+resource "aws_cloudwatch_log_group" "remoto" {
+  name              = "remoto"
   retention_in_days = 1
 }
 
@@ -38,6 +38,10 @@ resource "aws_ecs_cluster" "remoto" {
 //
 // Guacd service
 //
+
+data "docker_image" "guacd" {
+  name = var.image_guacd
+}
 
 resource "aws_ecs_service" "guacd" {
   name            = "guacd"
@@ -73,13 +77,21 @@ resource "aws_ecs_task_definition" "guacd" {
     {
       name      = "guacd"
       essential = true
-      image     = var.image_guacd
+      image     = data.docker_image.guacd.repo_digest
       portMappings = [
         {
           containerPort = 4822
           hostPort      = 4822
         }
       ]
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          "awslogs-group"         = "remoto",
+          "awslogs-region"        = "${var.aws_region}",
+          "awslogs-stream-prefix" = "remoto"
+        }
+      }
     }
   ])
 }
@@ -88,6 +100,11 @@ resource "aws_ecs_task_definition" "guacd" {
 //
 // Control service
 //
+
+data "docker_image" "control" {
+  name = var.image_control
+}
+
 resource "aws_ecs_service" "control" {
   name            = "control"
   cluster         = aws_ecs_cluster.remoto.id
@@ -122,8 +139,8 @@ resource "aws_ecs_task_definition" "control" {
     {
       name      = "control"
       essential = true
-      image     = var.image_control
-      command   = ["serve"]
+      image     = data.docker_image.control.repo_digest
+      # command   = ["serve"]
       portMappings = [
         {
           containerPort = 80
@@ -133,7 +150,7 @@ resource "aws_ecs_task_definition" "control" {
       environment = [
         {
           name  = "REMOTO_GUACD_FQDN",
-          value = "guacd.remoto.local:4822"
+          value = "guacd.remoto.local"
         },
         {
           name  = "REMOTO_SANDBOX_FQDN",
@@ -155,7 +172,7 @@ resource "aws_ecs_task_definition" "control" {
       logConfiguration = {
         logDriver = "awslogs",
         options = {
-          "awslogs-group"         = "remoto-control",
+          "awslogs-group"         = "remoto",
           "awslogs-region"        = "${var.aws_region}",
           "awslogs-stream-prefix" = "remoto"
         }
@@ -168,17 +185,21 @@ resource "aws_ecs_task_definition" "control" {
 // Sandbox services
 //
 
+data "docker_image" "sandbox" {
+  name = var.image_sandbox
+}
+
 resource "aws_ecs_service" "sandbox" {
   name            = "sandbox"
   cluster         = aws_ecs_cluster.remoto.id
   task_definition = aws_ecs_task_definition.sandbox.arn
-  desired_count   = 5
-  launch_type     = "FARGATE"
+  desired_count   = var.remoto_sandbox_count
+  launch_type     = "EC2"
 
   network_configuration {
-    subnets          = module.vpc.public_subnets
-    assign_public_ip = true
-    security_groups  = [aws_security_group.private.id]
+    subnets = module.vpc.public_subnets
+    # assign_public_ip = true # Service has EC2 backend, Public IP is assigned on the EC2 instance
+    security_groups = [aws_security_group.private.id]
   }
 
   service_registries {
@@ -188,7 +209,7 @@ resource "aws_ecs_service" "sandbox" {
 
 resource "aws_ecs_task_definition" "sandbox" {
   family                   = "sandbox"
-  requires_compatibilities = ["FARGATE"]
+  requires_compatibilities = ["EC2"]
   network_mode             = "awsvpc"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
   depends_on = [
@@ -200,9 +221,10 @@ resource "aws_ecs_task_definition" "sandbox" {
 
   container_definitions = jsonencode([
     {
-      name      = "sandbox"
-      essential = true
-      image     = var.image_sandbox
+      name       = "sandbox"
+      essential  = true
+      image      = data.docker_image.sandbox.repo_digest
+      privileged = true
       portMappings = [
         {
           containerPort = 9800

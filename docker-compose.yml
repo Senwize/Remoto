@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   sandbox:
-    image: senwize/sandbox
+    image: 756581103470.dkr.ecr.eu-central-1.amazonaws.com/sandbox:latest
     scale: 3
     build:
       context: docker
@@ -23,10 +23,11 @@ services:
     #   - '5901:5901'
 
   guacd:
-    image: guacamole/guacd:1.4.0
+    image: 756581103470.dkr.ecr.eu-central-1.amazonaws.com/guacd:latest
     hostname: guacd.remoto.local
 
   remoto:
+    # Note that this uses a development image not the production one
     build:
       context: .
       dockerfile: docker/dev.Dockerfile

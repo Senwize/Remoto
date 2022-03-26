@@ -33,4 +33,5 @@ FROM scratch AS production
 WORKDIR /app
 COPY --from=builder_server /app/remoto /app/remoto
 COPY --from=builder_client /app/dist /app/client/dist
-CMD ["/app/remoto"]
+ENTRYPOINT ["/app/remoto"]
+CMD ["serve"]
