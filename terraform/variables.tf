@@ -44,14 +44,24 @@ variable "remoto_admin_code" {
   default = "admin"
 }
 
-variable "remoto_sandbox_instance_type" {
+variable "remoto_sandbox_count" {
+  type    = number
+  default = 3
+}
+
+variable "remoto_backend_instance_count" {
+  type    = number
+  default = 3
+}
+
+variable "remoto_backend_instance_type" {
   type    = string
   default = "t3.medium"
 }
 
-variable "remoto_sandbox_count" {
-  type    = number
-  default = 3
+variable "use_cloud9" {
+  type    = bool
+  default = false
 }
 
 variable "ssh_pubkey" {

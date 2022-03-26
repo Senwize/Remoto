@@ -9,8 +9,45 @@ module "vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 }
-resource "aws_security_group" "private" {
-  name        = "remoto-private-sg"
+resource "aws_security_group" "sandbox" {
+  name        = "remoto-sandbox-sg"
+  description = "Allow all traffic in subnet"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "Allow VPC inbound"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = module.vpc.public_subnets_cidr_blocks
+  }
+
+  ingress {
+    description = "Allow RDP external"
+    from_port   = 3389
+    to_port     = 3389
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow SSH inbound external"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+resource "aws_security_group" "guacd" {
+  name        = "remoto-guacd-sg"
   description = "Allow all traffic in subnet"
   vpc_id      = module.vpc.vpc_id
 
@@ -61,21 +98,8 @@ resource "aws_security_group" "control" {
 }
 
 resource "aws_service_discovery_private_dns_namespace" "this" {
-  name = "remoto.local"
+  name = "ecs.remoto.local"
   vpc  = module.vpc.vpc_id
-}
-
-resource "aws_service_discovery_service" "control" {
-  name = "control"
-
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.this.id
-
-    dns_records {
-      ttl  = 10
-      type = "A"
-    }
-  }
 }
 
 resource "aws_service_discovery_service" "guacd" {
@@ -91,15 +115,19 @@ resource "aws_service_discovery_service" "guacd" {
   }
 }
 
-resource "aws_service_discovery_service" "sandbox" {
-  name = "sandbox"
+# Hosted zone is provided by the service discovery
+resource "aws_route53_zone" "private" {
+  name = "remoto.local"
 
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.this.id
-
-    dns_records {
-      ttl  = 10
-      type = "A"
-    }
+  vpc {
+    vpc_id = module.vpc.vpc_id
   }
+}
+
+resource "aws_route53_record" "sandbox" {
+  zone_id = aws_route53_zone.private.zone_id
+  name    = "sandbox.remoto.local"
+  type    = "A"
+  ttl     = "10"
+  records = concat(aws_instance.sandbox.*.private_ip, [aws_instance.test.private_ip])
 }

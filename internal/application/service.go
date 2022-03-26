@@ -158,15 +158,17 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 
 	// Setup tunnel configuration
 	config := guac.NewGuacamoleConfiguration()
-	config.Protocol = "vnc"
+	// config.Protocol = "vnc"
+	// config.Parameters["port"] = "5901"
+	config.Protocol = "rdp"
 	config.Parameters["hostname"] = ip
-	config.Parameters["port"] = "5901"
+	config.Parameters["port"] = "3389"
 	config.Parameters["username"] = "workshop"
 	config.Parameters["password"] = "workshop"
 	config.Parameters["ignore-cert"] = "true"
 	config.Parameters["security"] = "any"
-	config.OptimalScreenWidth = 1920
-	config.OptimalScreenHeight = 1080
+	config.OptimalScreenWidth = 1366
+	config.OptimalScreenHeight = 768
 	config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
 
 	// Get GuacD IP

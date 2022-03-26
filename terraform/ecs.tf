@@ -53,7 +53,7 @@ resource "aws_ecs_service" "guacd" {
   network_configuration {
     subnets          = module.vpc.public_subnets
     assign_public_ip = true
-    security_groups  = [aws_security_group.private.id]
+    security_groups  = [aws_security_group.guacd.id]
   }
 
   service_registries {
@@ -70,8 +70,8 @@ resource "aws_ecs_task_definition" "guacd" {
     aws_iam_role.ecs_execution_role
   ]
 
-  cpu    = 256
-  memory = 512
+  cpu    = 2048
+  memory = 4096
 
   container_definitions = jsonencode([
     {
@@ -117,10 +117,6 @@ resource "aws_ecs_service" "control" {
     assign_public_ip = true
     security_groups  = [aws_security_group.control.id]
   }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.control.arn
-  }
 }
 
 resource "aws_ecs_task_definition" "control" {
@@ -150,7 +146,7 @@ resource "aws_ecs_task_definition" "control" {
       environment = [
         {
           name  = "REMOTO_GUACD_FQDN",
-          value = "guacd.remoto.local"
+          value = "guacd.ecs.remoto.local"
         },
         {
           name  = "REMOTO_SANDBOX_FQDN",
@@ -196,28 +192,24 @@ resource "aws_ecs_service" "sandbox" {
   desired_count   = var.remoto_sandbox_count
   launch_type     = "EC2"
 
-  network_configuration {
-    subnets = module.vpc.public_subnets
-    # assign_public_ip = true # Service has EC2 backend, Public IP is assigned on the EC2 instance
-    security_groups = [aws_security_group.private.id]
-  }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.sandbox.arn
-  }
+  # network_configuration {
+  #   subnets = module.vpc.public_subnets
+  #   # assign_public_ip = true # Service has EC2 backend, Public IP is assigned on the EC2 instance
+  #   security_groups = [aws_security_group.sandbox.id]
+  # }
 }
 
 resource "aws_ecs_task_definition" "sandbox" {
   family                   = "sandbox"
   requires_compatibilities = ["EC2"]
-  network_mode             = "awsvpc"
+  network_mode             = "host"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
   depends_on = [
     aws_iam_role.ecs_execution_role
   ]
 
-  cpu    = 256
-  memory = 512
+  cpu    = 2048
+  memory = 2048
 
   container_definitions = jsonencode([
     {

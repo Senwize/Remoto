@@ -147,16 +147,17 @@ func (a *Application) httpAssignSandbox() http.HandlerFunc {
 		sessionID := chi.URLParam(r, "sessionID")
 
 		session := a.sessions.Get(sessionID)
+		// Release old sandbox
+		a.sandbox.Release(session.Sandbox)
+
+		// Assign new sandbox
 		sandbox, err := a.sandbox.Reserve(net.ParseIP(req.SandboxIP))
 		if err != nil {
 			httpError(w, err)
 			return
 		}
-
-		// Release old sandbox
-		a.sandbox.Release(session.Sandbox)
-		// Assign new sandbox
 		session.Sandbox = sandbox
+
 		log.Printf("Assigned sandbox %s to session %s", sandbox.IP, session.GroupName)
 		httpResponse(w, http.StatusOK, map[string]string{"message": "Assigned"})
 	}
@@ -180,11 +181,15 @@ func (a *Application) httpAdminSummary() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Create session dto list
 		sessions := a.sessions.List()
-		dtoSessions := make([]sessionDTO, len(sessions))
+		dtoSessions := make([]sessionDTO, 0, len(sessions))
 		sandboxSessionMap := make(map[string]string)
 
 		// Iterate sessions
 		for i, session := range sessions {
+			if session.IsAdmin {
+				continue
+			}
+
 			dto := sessionDTO{
 				ID:         session.ID,
 				Groupname:  session.GroupName,

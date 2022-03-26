@@ -64,13 +64,12 @@ resource "aws_iam_instance_profile" "cluster_member" {
   role = aws_iam_role.cluster_member.name
 }
 
-
 resource "aws_instance" "sandbox" {
-  count = var.remoto_sandbox_count
+  count = var.remoto_backend_instance_count
 
   ami                         = var.ami_ecs
-  instance_type               = var.remoto_sandbox_instance_type
-  vpc_security_group_ids      = [aws_security_group.private.id]
+  instance_type               = var.remoto_backend_instance_type
+  vpc_security_group_ids      = [aws_security_group.sandbox.id]
   subnet_id                   = module.vpc.public_subnets[0]
   key_name                    = aws_key_pair.deployer.key_name
   iam_instance_profile        = aws_iam_instance_profile.cluster_member.name
@@ -85,5 +84,22 @@ EOF
     deployment  = "remoto"
     application = "sandbox"
     name        = "sandbox-${count.index}"
+  }
+}
+
+
+resource "aws_instance" "test" {
+  ami                         = "ami-0a95ac0a51f0ee2de"
+  instance_type               = var.remoto_backend_instance_type
+  vpc_security_group_ids      = [aws_security_group.sandbox.id]
+  subnet_id                   = module.vpc.public_subnets[0]
+  key_name                    = aws_key_pair.deployer.key_name
+  iam_instance_profile        = aws_iam_instance_profile.cluster_member.name
+  associate_public_ip_address = true
+
+  tags = {
+    deployment  = "remoto"
+    application = "test"
+    name        = "test"
   }
 }
