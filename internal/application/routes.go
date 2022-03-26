@@ -3,6 +3,7 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -109,6 +110,7 @@ func (a *Application) httpCreateSession() http.HandlerFunc {
 		session := a.sessions.Create(req.GroupName)
 		session.Sandbox = sandbox
 		setCookie(w, cookieSessionID, session.ID)
+		log.Printf("Assigned sandbox %s to session %s", sandbox.IP, session.GroupName)
 		httpResponse(w, http.StatusOK, sessionToDTO(session))
 	}
 }
@@ -155,6 +157,7 @@ func (a *Application) httpAssignSandbox() http.HandlerFunc {
 		a.sandbox.Release(session.Sandbox)
 		// Assign new sandbox
 		session.Sandbox = sandbox
+		log.Printf("Assigned sandbox %s to session %s", sandbox.IP, session.GroupName)
 		httpResponse(w, http.StatusOK, map[string]string{"message": "Assigned"})
 	}
 }
