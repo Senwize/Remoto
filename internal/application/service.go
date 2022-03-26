@@ -171,7 +171,7 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 
 	// Get GuacD IP
 	guacdIP := a.discovery.Get(DISCOVERY_GUACD)
-	if guacdIP == nil || len(guacdIP) == 0 {
+	if len(guacdIP) == 0 {
 		return nil, errors.New("cannot start guacamole tunnel without guacd ip")
 	}
 
