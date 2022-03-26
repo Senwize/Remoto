@@ -2,9 +2,10 @@ import { h, Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Display } from '../components/display';
 import { ConnectButton, State } from '../components/connect-btn';
-import { RemoteDesktop } from '../services/remote-desktop';
+import { ConnectOpts, RemoteDesktop } from '../services/remote-desktop';
 import { SerialForwarder } from '../services/serial-forwarder';
 import Guacamole from 'guacamole-common-js';
+import qs from 'query-string';
 
 const forwarder = new SerialForwarder();
 const remoteDesktop = new RemoteDesktop();
@@ -58,7 +59,7 @@ export const Viewer = () => {
     // listeners
     function onRemoteDesktopConnect(client: Guacamole.Client) {
       setClient(client);
-      document.documentElement.requestFullscreen();
+      // document.documentElement.requestFullscreen();
     }
     function onRemoteDesktopDisconnect() {
       reset();
@@ -95,9 +96,13 @@ export const Viewer = () => {
       await forwarder.connect();
     }
 
+    // Opts from query
+    const opts = qs.parse(location.search);
+    console.log(`Connecting with opts`, opts);
+
     // Initialize Guacamole Client
     // const rd = new RemoteDesktop();
-    await remoteDesktop.connect();
+    await remoteDesktop.connect(opts);
 
     // Set references
 

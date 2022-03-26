@@ -3,7 +3,7 @@ import { StateCreator } from 'zustand';
 interface SessionState {
   session: SessionData | null | undefined;
   validateSession(): void;
-  startSession(workshopCode: string, groupName: string): void;
+  startSession(workshopCode: string, groupName: string): Promise<void>;
 }
 
 export const sessionSlice: StateCreator<SessionState> = (set, get) => ({

@@ -1,9 +1,20 @@
 import { Client, Tunnel, WebSocketTunnel, Status, Display } from 'guacamole-common-js';
 import { EventEmitter } from 'eventemitter3';
+import qs from 'query-string';
 
 enum State {
   Disconnected,
   Ready,
+}
+
+export interface ConnectOpts {
+  protocol: 'vnc' | 'rdp';
+  hostname: string;
+  port: string;
+  username: string;
+  password: string;
+  ignorecert: string;
+  security: 'any';
 }
 
 export class RemoteDesktop extends EventEmitter {
@@ -38,7 +49,7 @@ export class RemoteDesktop extends EventEmitter {
     console.log('[RemoteDesktop] tunnel state: ', state);
   }
 
-  async connect() {
+  async connect(opts: Partial<ConnectOpts> = {}) {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const tunnel = new WebSocketTunnel(`${protocol}//${location.host}/api/ws/guacamole`);
     const client = new Client(tunnel);
@@ -53,7 +64,7 @@ export class RemoteDesktop extends EventEmitter {
     client.onerror = this.onClientError.bind(this);
     client.onstatechange = this.onClientStateChange.bind(this);
 
-    client.connect(undefined);
+    client.connect(qs.stringify(opts));
 
     return () => {
       client.disconnect();

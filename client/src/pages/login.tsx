@@ -1,5 +1,6 @@
 import { createRef, h } from 'preact';
-import { useState } from 'preact/hooks';
+import { route } from 'preact-router';
+import { useEffect, useState } from 'preact/hooks';
 import { useStore } from '../services/store';
 
 const PREVIOUS_WORKSHOPCODE = 'prev_workshop_code';
@@ -11,6 +12,13 @@ export default function LoginPage() {
   const [workshopCode, setWorkshopCode] = useState(localStorage.getItem(PREVIOUS_WORKSHOPCODE) ?? '');
   const [groupName, setGroupName] = useState(localStorage.getItem(PREVIOUS_GROUPNAME) ?? '');
   const startSession = useStore((state) => state.startSession);
+  const session = useStore((state) => state.session);
+
+  useEffect(() => {
+    if (session !== null && session !== undefined) {
+      route(session.isAdmin ? '/admin' : '/viewer');
+    }
+  }, [session]);
 
   function displayError(err: Error) {
     if (errorTimeout.current) {

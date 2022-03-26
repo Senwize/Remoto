@@ -146,22 +146,22 @@ func (a *Application) startHTTPServer(errC chan error, addr string) func() {
 	}
 }
 
-func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
-	log.Printf("Guac WS connection...\n")
-
-	// Get session sandbox
-	session := getSession(r.Context())
-	if session == nil {
-		return nil, errors.New("cannot start guacamole tunnel without session")
+func or(a, b string) string {
+	if a != "" {
+		return a
 	}
-	ip := session.Sandbox.IP.To4().String()
+	return b
+}
 
-	// Setup tunnel configuration
-	config := guac.NewGuacamoleConfiguration()
-	// config.Protocol = "vnc"
-	// config.Parameters["port"] = "5901"
-	config.Protocol = "rdp"
+func guacdConfigFromSession(config *guac.Config, session *Session) *guac.Config {
+	ip := session.Sandbox.IP.To4().String()
 	config.Parameters["hostname"] = ip
+	return config
+}
+
+func guacdConfigDefaults() *guac.Config {
+	config := guac.NewGuacamoleConfiguration()
+	config.Protocol = "rdp"
 	config.Parameters["port"] = "3389"
 	config.Parameters["username"] = "workshop"
 	config.Parameters["password"] = "workshop"
@@ -170,6 +170,34 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 	config.OptimalScreenWidth = 1366
 	config.OptimalScreenHeight = 768
 	config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
+	return config
+}
+
+func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
+	var err error
+	log.Printf("Guac WS connection...\n")
+
+	// Get session sandbox
+	session := getSession(r.Context())
+	if session == nil {
+		return nil, errors.New("cannot start guacamole tunnel without session")
+	}
+
+	config := guacdConfigDefaults()
+
+	// As admin we can arbitary choose a sandbox with settings
+	if session.IsAdmin {
+		q := r.URL.Query()
+		config.Protocol = or(q.Get("protocol"), config.Protocol)
+		config.Parameters["hostname"] = or(q.Get("hostname"), config.Parameters["hostname"])
+		config.Parameters["port"] = or(q.Get("port"), config.Parameters["port"])
+		config.Parameters["username"] = or(q.Get("username"), config.Parameters["username"])
+		config.Parameters["password"] = or(q.Get("password"), config.Parameters["password"])
+		config.Parameters["ignore-cert"] = or(q.Get("ignorecert"), config.Parameters["ignore-cert"])
+		config.Parameters["security"] = or(q.Get("security"), config.Parameters["security"])
+	} else {
+		config = guacdConfigFromSession(config, session)
+	}
 
 	// Get GuacD IP
 	guacdIP := a.discovery.Get(DISCOVERY_GUACD)

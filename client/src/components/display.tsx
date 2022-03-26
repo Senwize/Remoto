@@ -80,9 +80,9 @@ export const Display = ({ client, withControl }: Props) => {
       if (!containerRef.current) return;
       // Set width / height
       const width = containerRef.current.offsetWidth;
-      const widthScale = width / 1920;
+      const widthScale = width / display.getWidth();
       const height = containerRef.current.offsetHeight;
-      const heightScale = height / 1080;
+      const heightScale = height / display.getHeight();
       console.log(`[Display] Container size ${width}x${height} scaling ${widthScale}x${heightScale}`);
       display.scale(Math.min(widthScale, heightScale));
     }
@@ -94,7 +94,8 @@ export const Display = ({ client, withControl }: Props) => {
     // Set the container contents
     const display = client.getDisplay();
     const displayEl = display.getElement();
-    containerRef.current.replaceChildren(displayEl);
+    containerRef.current.innerHTML = '';
+    containerRef.current.appendChild(displayEl);
     displayEl.focus();
 
     onResize();
