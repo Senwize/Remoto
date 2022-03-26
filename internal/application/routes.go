@@ -37,7 +37,7 @@ func (a *Application) registerRoutes() {
 	r.Handle("/api/ws/guacamole", wsServer)
 
 	wd, _ := os.Getwd()
-	r.Handle("/*", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
+	r.Mount("/", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
 }
 
 func (a *Application) httpHealthCheck() http.HandlerFunc {
@@ -151,6 +151,9 @@ func (a *Application) httpAssignSandbox() http.HandlerFunc {
 			return
 		}
 
+		// Release old sandbox
+		a.sandbox.Release(session.Sandbox)
+		// Assign new sandbox
 		session.Sandbox = sandbox
 		httpResponse(w, http.StatusOK, map[string]string{"message": "Assigned"})
 	}
