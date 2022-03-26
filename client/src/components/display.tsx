@@ -80,9 +80,9 @@ export const Display = ({ client, withControl }: Props) => {
       if (!containerRef.current) return;
       // Set width / height
       const width = containerRef.current.offsetWidth;
-      const widthScale = width / display.getWidth();
+      const widthScale = width / (display.getWidth() || 1920);
       const height = containerRef.current.offsetHeight;
-      const heightScale = height / display.getHeight();
+      const heightScale = height / (display.getHeight() || 1080);
       console.log(`[Display] Container size ${width}x${height} scaling ${widthScale}x${heightScale}`);
       display.scale(Math.min(widthScale, heightScale));
     }

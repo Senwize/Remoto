@@ -31,6 +31,10 @@ export const CommandBar = () => {
   const session = useStore((state) => state.selectedSession);
   const sandbox = useStore((state) => state.selectedSandbox);
 
+  function openViewer(sandbox: Sandbox) {
+    window.open(`/viewer?hostname=${sandbox.ip}`);
+  }
+
   return (
     <div className='flex gap-2'>
       <Button
@@ -44,6 +48,12 @@ export const CommandBar = () => {
         baseColor='green'
         disabled={session === null || sandbox === null}
         onClick={() => session && sandbox && assignSandbox(session.id, sandbox.ip)}
+      />
+      <Button
+        value='Connect to sandbox'
+        baseColor='blue'
+        disabled={sandbox === null}
+        onClick={() => sandbox && openViewer(sandbox)}
       />
     </div>
   );
