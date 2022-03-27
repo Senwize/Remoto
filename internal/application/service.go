@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/wwt/guac"
 	"remoto.senwize.com/internal/discovery"
 	"remoto.senwize.com/internal/sandbox"
+	"remoto.senwize.com/internal/session"
 )
 
 var (
@@ -29,7 +31,7 @@ type Application struct {
 	router    chi.Router
 	sandbox   *sandbox.Service
 	discovery *discovery.Service
-	sessions  *SessionService
+	sessions  *session.Service
 
 	workshopCode string
 	adminCode    string
@@ -49,7 +51,7 @@ func New(cfg Config) *Application {
 		router:       chi.NewRouter(),
 		discovery:    discovery.New(),
 		sandbox:      sandbox.New(),
-		sessions:     newSessionService(),
+		sessions:     session.New(),
 		done:         make(chan struct{}),
 		workshopCode: cfg.WorkshopCode,
 		adminCode:    cfg.AdminCode,
@@ -153,7 +155,17 @@ func or(a, b string) string {
 	return b
 }
 
-func guacdConfigFromSession(config *guac.Config, session *Session) *guac.Config {
+func orInt(a string, b int) int {
+	if a != "" {
+		i, err := strconv.Atoi(a)
+		if err != nil {
+			return b
+		}
+		return i
+	}
+	return b
+}
+func guacdConfigFromSession(config *guac.Config, session *session.Session) *guac.Config {
 	ip := session.Sandbox.IP.To4().String()
 	config.Parameters["hostname"] = ip
 	return config
@@ -161,15 +173,15 @@ func guacdConfigFromSession(config *guac.Config, session *Session) *guac.Config 
 
 func guacdConfigDefaults() *guac.Config {
 	config := guac.NewGuacamoleConfiguration()
-	config.Protocol = "rdp"
-	config.Parameters["port"] = "3389"
-	config.Parameters["username"] = "workshop"
-	config.Parameters["password"] = "workshop"
-	config.Parameters["ignore-cert"] = "true"
-	config.Parameters["security"] = "any"
-	config.OptimalScreenWidth = 1366
-	config.OptimalScreenHeight = 768
-	config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
+	config.Protocol = or(os.Getenv("REMOTO_REMOTE_PROTOCOL"), "rdp")
+	config.Parameters["port"] = or(os.Getenv("REMOTO_REMOTE_PORT"), "3389")
+	config.Parameters["username"] = or(os.Getenv("REMOTO_REMOTE_USERNAME"), "workshop")
+	config.Parameters["password"] = or(os.Getenv("REMOTO_REMOTE_PASSWORD"), "workshop")
+	config.Parameters["ignore-cert"] = or(os.Getenv("REMOTO_REMOTE_IGNORE_CERT"), "true")
+	config.Parameters["security"] = or(os.Getenv("REMOTO_REMOTE_SECURITY"), "any")
+	config.OptimalScreenWidth = orInt(os.Getenv("REMOTO_REMOTE_WIDTH"), 1366)
+	config.OptimalScreenHeight = orInt(os.Getenv("REMOTO_REMOTE_HEIGHT"), 768)
+	// config.AudioMimetypes = []string{"audio/L16", "rate=44100", "channels=2"}
 	return config
 }
 
@@ -177,16 +189,16 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 	var err error
 	log.Printf("Guac WS connection...\n")
 
-	// Get session sandbox
-	session := getSession(r.Context())
-	if session == nil {
+	// Get ses sandbox
+	ses := session.Get(r.Context())
+	if ses == nil {
 		return nil, errors.New("cannot start guacamole tunnel without session")
 	}
 
 	config := guacdConfigDefaults()
 
 	// As admin we can arbitary choose a sandbox with settings
-	if session.IsAdmin {
+	if ses.IsAdmin {
 		q := r.URL.Query()
 		config.Protocol = or(q.Get("protocol"), config.Protocol)
 		config.Parameters["hostname"] = or(q.Get("hostname"), config.Parameters["hostname"])
@@ -196,7 +208,7 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 		config.Parameters["ignore-cert"] = or(q.Get("ignorecert"), config.Parameters["ignore-cert"])
 		config.Parameters["security"] = or(q.Get("security"), config.Parameters["security"])
 	} else {
-		config = guacdConfigFromSession(config, session)
+		config = guacdConfigFromSession(config, ses)
 	}
 
 	// Get GuacD IP
@@ -205,7 +217,7 @@ func (a *Application) onGuacConnect(r *http.Request) (guac.Tunnel, error) {
 		return nil, errors.New("cannot start guacamole tunnel without guacd ip")
 	}
 
-	log.Printf("Connecting session (%s) to sandbox (%s) through guacd at (%s)\n", session.GroupName, config.Parameters["hostname"], guacdIP[0])
+	log.Printf("Connecting session (%s) to sandbox (%s) through guacd at (%s)\n", ses.GroupName, config.Parameters["hostname"], guacdIP[0])
 
 	// Connect to GuacD
 	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: guacdIP[0], Port: 4822})

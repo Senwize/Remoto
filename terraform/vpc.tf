@@ -31,6 +31,14 @@ resource "aws_security_group" "sandbox" {
   }
 
   ingress {
+    description = "Allow Serial Tunnel external"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     description = "Allow SSH inbound external"
     from_port   = 22
     to_port     = 22

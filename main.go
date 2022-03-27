@@ -53,7 +53,7 @@ func main() {
 	wd, _ := os.Getwd()
 	mux.Handle("/", http.FileServer(http.Dir(path.Join(wd, "./client/dist"))))
 	mux.Handle("/websocket-tunnel", wsServer)
-	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket("18.196.196.34:5910"))
+	mux.Handle("/websocket-serial", serialbroker.HandleWebsocket(5000))
 
 	s := &http.Server{
 		Addr:           HOST_ADDR,

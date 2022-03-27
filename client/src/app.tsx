@@ -3,6 +3,7 @@ import Router, { route, Route } from 'preact-router';
 import { useEffect } from 'preact/hooks';
 import { AdminPage } from './pages/admin';
 import LoginPage from './pages/login';
+import { TestPage } from './pages/test';
 import { Viewer } from './pages/viewer';
 import { useStore } from './services/store';
 import './styles/global.css';
@@ -56,19 +57,10 @@ const App = () => {
     return <></>;
   }
 
-  // if (session === null) {
-  //   return <LoginPage />;
-  // }
-
-  // if (session.isAdmin) {
-  //   return <AdminPage />;
-  // }
-
-  // return <Viewer />;
-
   return (
     <Router>
       <Route path='/' component={LoginPage} />
+      <Route path='/test' component={TestPage} />
       <ProtectedRoute path='/viewer' component={Viewer} />
       <AdminRoute path='/admin' component={AdminPage} />
     </Router>

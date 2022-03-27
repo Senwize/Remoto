@@ -1,4 +1,4 @@
-package application
+package session
 
 import (
 	"context"
@@ -31,22 +31,22 @@ func (s *Session) Touch() {
 	s.LastActive = time.Now()
 }
 
-// SessionService ...
-type SessionService struct {
+// Service ...
+type Service struct {
 	store map[string]*Session
 }
 
-func newSessionService() *SessionService {
-	return &SessionService{
+func New() *Service {
+	return &Service{
 		store: map[string]*Session{},
 	}
 }
 
-func (s *SessionService) Get(id string) *Session {
+func (s *Service) Get(id string) *Session {
 	return s.store[id]
 }
 
-func (s *SessionService) Create(groupName string) *Session {
+func (s *Service) Create(groupName string) *Session {
 	if groupName == "" {
 		groupName = s.generateName()
 	}
@@ -62,11 +62,11 @@ func (s *SessionService) Create(groupName string) *Session {
 	return session
 }
 
-func (s *SessionService) Delete(id string) {
+func (s *Service) Delete(id string) {
 	delete(s.store, id)
 }
 
-func (s *SessionService) List() []Session {
+func (s *Service) List() []Session {
 	sessions := make([]Session, 0, len(s.store))
 	for _, session := range s.store {
 		sessions = append(sessions, *session)
@@ -74,7 +74,7 @@ func (s *SessionService) List() []Session {
 	return sessions
 }
 
-func (s *SessionService) nameExists(name string) bool {
+func (s *Service) nameExists(name string) bool {
 	for _, session := range s.store {
 		if session.GroupName == name {
 			return true
@@ -83,7 +83,7 @@ func (s *SessionService) nameExists(name string) bool {
 	return false
 }
 
-func (s *SessionService) generateName() string {
+func (s *Service) generateName() string {
 	for {
 		name := names.Generate(2)
 		if !s.nameExists(name) {
@@ -105,10 +105,10 @@ func createRandomString(length int) string {
 	return string(str)
 }
 
-func withSession(ctx context.Context, session *Session) context.Context {
+func With(ctx context.Context, session *Session) context.Context {
 	return context.WithValue(ctx, ctxSessionKey, session)
 }
-func getSession(ctx context.Context) *Session {
+func Get(ctx context.Context) *Session {
 	v := ctx.Value(ctxSessionKey)
 	if v == nil {
 		return nil

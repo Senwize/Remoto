@@ -2,17 +2,19 @@ package serialbroker
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"remoto.senwize.com/internal/session"
 )
 
 /*
 	TODO: try and recover from (TCP)socket errors to avoid closing the WebSocket connection
 */
 
-func HandleWebsocket(target string) http.HandlerFunc {
+func HandleWebsocket(port int) http.HandlerFunc {
 	upgrader := &websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -26,16 +28,38 @@ func HandleWebsocket(target string) http.HandlerFunc {
 		if err != nil {
 			return
 		}
-		fmt.Println("[WS] Connected")
+		log.Println("[WS] Connected")
 
-		// Create tcp connection to pico agent
-		picoSock, err := net.Dial("tcp", target)
-		if err != nil {
-			fmt.Printf("failed to connect to pico agent: %v", err)
+		var ip net.IP
+
+		// Get session sandbox
+		s := session.Get(r.Context())
+		if s == nil {
+			log.Println("[WS] Cannot start serial tunnel without session")
 			webSock.Close()
 			return
 		}
-		fmt.Println("[TCP] Connected")
+
+		// Get Admin hostname or sandbox IP
+		query := r.URL.Query()
+		if s.IsAdmin && query.Get("hostname") != "" {
+			ip = net.ParseIP(query.Get("hostname"))
+		} else if s.Sandbox != nil {
+			ip = s.Sandbox.IP
+		} else {
+			log.Println("[WS] Cannot start serial tunnel without destination")
+			webSock.Close()
+			return
+		}
+
+		// Create tcp connection to pico agent
+		picoSock, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: ip, Port: port})
+		if err != nil {
+			log.Printf("[SerialTunnel] failed to connect to pico agent: %v\n", err)
+			return
+		}
+
+		log.Printf("[SerialTunnel] Connected session (%s) to serial tunnel tcp (%s)\n", s.GroupName, ip)
 
 		done := make(chan struct{})
 		errC := make(chan error)
@@ -45,17 +69,17 @@ func HandleWebsocket(target string) http.HandlerFunc {
 		go writePipe(done, errC, webSock, picoSock)
 
 		webSock.SetCloseHandler(func(code int, text string) error {
-			fmt.Printf("[BROKER] Websocket disconnected: %d %s\n", code, text)
+			log.Printf("[SerialTunnel] Websocket for (%s) disconnected: %d %s\n", s.GroupName, code, text)
 			close(done)
 			return nil
 		})
 
 		select {
 		case err := <-errC:
-			fmt.Printf("[BROKER] Error: %v\n", err)
+			log.Printf("[SerialTunnel] (%s) Error: %v\n", s.GroupName, err)
 			close(done)
 		case <-done:
-			fmt.Println("[BROKER] Done")
+			log.Println("[SerialTunnel] Done")
 		}
 
 		webSock.Close()
@@ -75,11 +99,11 @@ outer:
 				errC <- fmt.Errorf("[WS >> TCP] %w", err)
 				break outer
 			}
-			fmt.Printf("[WS >> TCP] %s\n", msg)
+			log.Printf("[WS >> TCP] %s\n", msg)
 			picoSock.Write(msg)
 		}
 	}
-	fmt.Printf("[WS >> TCP] Disconnected\n")
+	log.Printf("[WS >> TCP] Disconnected\n")
 }
 
 func writePipe(done chan struct{}, errC chan error, webSock *websocket.Conn, picoSock net.Conn) {
@@ -95,9 +119,9 @@ outer:
 				errC <- fmt.Errorf("[TCP >> WS] %w", err)
 				break outer
 			}
-			fmt.Printf("[TCP >> WS] %s\n", buf[:n])
+			log.Printf("[TCP >> WS] %s\n", buf[:n])
 			webSock.WriteMessage(websocket.TextMessage, buf[:n])
 		}
 	}
-	fmt.Printf("[TCP >> WS] Disconnected\n")
+	log.Printf("[TCP >> WS] Disconnected\n")
 }

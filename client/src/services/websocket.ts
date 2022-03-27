@@ -1,4 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
+import qs from 'query-string';
 
 export class AutoWebSocket extends EventEmitter {
   private readonly address: string;
@@ -6,6 +7,7 @@ export class AutoWebSocket extends EventEmitter {
   private keepAlive = false;
   private connectionAttempts = 0;
   private maxRetryDelay = 2000;
+  private query: Record<string, string> = {};
 
   constructor(address: string) {
     super();
@@ -63,7 +65,7 @@ export class AutoWebSocket extends EventEmitter {
     await this.retryDelay();
 
     // Create new websocket instance
-    const ws = new WebSocket(this.address);
+    const ws = new WebSocket(this.address + '?' + qs.stringify(this.query));
 
     // Wait for websocket open / error
     await this.waitForConnect(ws).catch(this.tryConnect.bind(this));
@@ -78,8 +80,9 @@ export class AutoWebSocket extends EventEmitter {
   /**
    * Starts a connection and keepalive
    */
-  async connect() {
+  async connect(query: Record<string, string> = {}) {
     this.keepAlive = true;
+    this.query = query;
     return this.tryConnect();
   }
 

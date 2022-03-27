@@ -1,0 +1,21 @@
+[Unit]
+Description=Socat PTY TCP tunnel
+After=network-online.target
+Wants=network-online.target systemd-networkd-wait-online.service
+StartLimitBurst=5
+StartLimitIntervalSec=500
+#Before=my-other.service
+
+[Service]
+Type=simple
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=pico-pty-tcp
+Group=dialout
+
+ExecStart=/usr/bin/socat -d -d pty,raw,echo=0,link=/dev/picolink,mode=0666,unlink-close=0 tcp-l:5000,reuseaddr,fork
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=multi-user.target

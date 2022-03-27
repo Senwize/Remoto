@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { AutoWebSocket } from './websocket';
+import qs from 'query-string';
 
 enum State {
   Disconnected,
@@ -11,157 +12,132 @@ enum State {
 */
 
 export class SerialForwarder extends EventEmitter {
-  protected state = State.Disconnected;
-  // Websocket connection to serial broker
-  protected readonly protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  protected aws = new AutoWebSocket(`${this.protocol}//${location.host}/websocket-serial`);
+  protected aws?: AutoWebSocket;
   protected ws?: WebSocket;
-  // SerialPort to the Pico
   protected serialPort?: SerialPort;
-
-  // AbortController can be used to cancel streams
-  protected abortController = new AbortController();
-  // SerialPort streams
-  protected serialWriteable?: WritableStream<Uint8Array>;
-  protected serialReadable?: ReadableStream<Uint8Array>;
-  // Websocket streams
-  protected wsWritable?: WritableStream<Uint8Array>;
-  protected wsReadable?: ReadableStream<Uint8Array>;
-
-  constructor() {
-    super();
-    this.aws.addListener('connect', this.onWebsocketConnect.bind(this));
-  }
+  protected serialRead?: ReadableStreamDefaultReader<Uint8Array>;
+  protected serialWrite?: WritableStreamDefaultWriter<Uint8Array>;
+  protected readLoopAlive = false;
 
   async connect() {
-    // await this.connectWebSocket();
+    await this.connectWebsocket();
     await this.connectSerialPort();
-    await this.aws.connect();
-
-    console.log('[SerialForwarder] Initialized and started');
-    this.state = State.Ready;
-    this.emit('connect');
+    console.log('[SerialForwarder] Connected');
   }
 
-  protected createPipe() {
-    if (!this.wsReadable || !this.wsWritable || !this.serialReadable || !this.serialWriteable) {
-      throw new Error('Trying to createPipe without all writables/readables');
+  disconnect() {
+    this.readLoopAlive = false;
+    if (this.serialPort) {
+      this.serialPort.close();
     }
-
-    const opts: StreamPipeOptions = {
-      signal: this.abortController.signal,
-      preventAbort: true,
-      preventCancel: true,
-      preventClose: true,
-    };
-    this.serialReadable.pipeTo(this.wsWritable, opts);
-    this.wsReadable.pipeTo(this.serialWriteable, opts);
+    if (this.aws) {
+      this.aws.disconnect();
+    }
+    this.aws = undefined;
+    this.ws = undefined;
+    this.serialPort = undefined;
+    this.serialRead = undefined;
+    this.serialWrite = undefined;
+    console.log('[SerialForwarder] disconnected');
   }
 
-  protected async onWebsocketConnect(ws: WebSocket) {
-    // Abort stream pipe
-    this.abortController.abort();
-    this.abortController = new AbortController();
-    // Close websocket streams
-    this.wsWritable?.abort();
-    this.wsReadable?.cancel();
-
-    // Create websocket streams
-    this.wsWritable = newWebSocketWritable(ws);
-    this.wsReadable = newWebSocketReadable(ws);
-
-    // recreate pipes
-    this.createPipe();
-
-    console.log('[SerialForwarder] Websocket connected');
+  protected async connectWebsocket() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const q = qs.parse(location.search) as any;
+    const ws = new WebSocket(`${protocol}//${location.host}/api/ws/serial?` + qs.stringify(q));
+    ws.onopen = () => {
+      console.log('[SerialForwarder] Websocket connected');
+      this.ws = ws;
+      ws.onmessage = this.onWebsocketData.bind(this);
+    };
+    ws.onclose = ws.onerror = () => {
+      console.log('[SerialForwarder] Websocket disconnected');
+      setTimeout(this.connectWebsocket.bind(this), 1000);
+      this.ws = undefined;
+    };
   }
 
   protected async connectSerialPort() {
     // Request user to select a serial port
-    const port = await navigator.serial.requestPort({
-      // filters: [{ usbVendorId: 0x2e8a, usbProductId: 0x0005 }],
-    });
+    let port: SerialPort;
 
-    // Handle disconnect
-    port.ondisconnect = () => this.onSerialPortDisconnect();
+    try {
+      port = await navigator.serial.requestPort({
+        filters: [{ usbVendorId: 0x2e8a, usbProductId: 0x0005 }],
+      });
+    } catch (e) {
+      alert('Could not open serial port. Page will be refreshed');
+      location.reload();
+      return;
+    }
 
-    // Create a connection
-    await port.open({ baudRate: 115200 });
-    console.log('[SerialForwarder] Serial port opened');
+    port.ondisconnect = () => {
+      console.log('[SerialForwarder] Serial port disconnected');
+      this.serialPort = undefined;
+      this.serialRead = undefined;
+      this.serialWrite = undefined;
+      setTimeout(this.connectSerialPort.bind(this), 1000);
+      return;
+    };
+
+    // Open the serial port
+    try {
+      await port.open({ baudRate: 115200 });
+      console.log('[SerialForwarder] Serial port opened');
+    } catch (e) {
+      alert('Could not open serial port. Page will be refreshed');
+      location.reload();
+    }
 
     // Verify readability and writability
     if (!port.readable || !port.writable) {
       throw new Error("Can't open port with correct permissions");
     }
 
-    // Create serial streams
-    this.serialWriteable = port.writable;
-    this.serialReadable = port.readable;
-
-    // Set the portcreatePipe
     this.serialPort = port;
+    this.serialRead = port.readable.getReader();
+    this.serialWrite = port.writable.getWriter();
+
+    this.readLoopAlive = true;
+    this.pipeSerialToWS();
   }
 
-  protected onWebSocketDisconnect() {
-    console.log('[SerialForwarder] Websocket disconnected');
-    // this.disconnect();
+  private encoder = new TextEncoder();
+  async onWebsocketData(ev: MessageEvent<string>) {
+    if (!this.serialWrite || !this.ws) {
+      console.log("[SerialForwarder] onWebSocketData: Can't pipe without a serial port and websocket");
+      return;
+    }
+
+    // Pipe WS to Serial
+    this.serialWrite.write(this.encoder.encode(ev.data));
   }
 
-  protected onSerialPortDisconnect() {
-    console.log('[SerialForwarder] Serial port disconnected');
-    this.disconnect();
+  async pipeSerialToWS() {
+    console.log('[SerialForwarder] Reading serial port...');
+    if (!this.serialRead || !this.ws) {
+      console.log("[SerialForwarder] pipeSerialToWS: Can't pipe without a serial port and websocket");
+      this.readLoopAlive && setTimeout(this.pipeSerialToWS.bind(this), 1000);
+      return;
+    }
+
+    // Pipe WS to Serial
+    const { value, done } = await this.serialRead.read();
+    if (done) {
+      console.log('[SerialForwarder] Serial port closed');
+      return;
+    }
+
+    // Skip empty data
+    if (value === undefined) {
+      console.log('[SerialForwarder] Skipping empty data');
+      this.readLoopAlive && setTimeout(this.pipeSerialToWS.bind(this), 5);
+      return;
+    }
+
+    this.ws.send(value);
+
+    // Continue
+    this.readLoopAlive && setTimeout(this.pipeSerialToWS.bind(this), 5);
   }
-
-  async disconnect() {
-    if (this.state === State.Disconnected) return;
-    this.state = State.Disconnected;
-
-    // Cancel streams
-    this.abortController.abort();
-
-    // Close connections
-    // this.serialPort.close();
-    // this.ws.close();
-
-    // Emit event
-    this.emit('disconnect');
-  }
-}
-
-/**
- * Creates a writable stream which writes to the websocket
- * @param ws
- * @returns
- */
-function newWebSocketWritable(ws: WebSocket) {
-  return new WritableStream({
-    write(chunk: Uint8Array, controller) {
-      ws.send(chunk);
-    },
-  });
-}
-
-/**
- * Creates a readable stream which reads from the websocket
- * @param ws
- * @returns
- */
-function newWebSocketReadable(ws: WebSocket) {
-  const encoder = new TextEncoder();
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      ws.addEventListener('close', () => controller.close());
-      ws.addEventListener('message', (event) => {
-        controller.enqueue(encoder.encode(event.data));
-      });
-    },
-    pull(controller) {},
-    cancel() {},
-  });
-}
-
-export declare interface SerialForwarder {
-  addListener(event: 'connect', listener: () => void): this;
-  addListener(event: 'disconnect', listener: () => void): this;
-  addListener(event: string, listener: Function): this;
 }

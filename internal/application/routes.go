@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/wwt/guac"
+	"remoto.senwize.com/internal/serialbroker"
+	"remoto.senwize.com/internal/session"
 )
 
 var (
@@ -39,6 +41,11 @@ func (a *Application) registerRoutes() {
 	wsServer.OnDisconnect = sessions.Delete
 	r.Handle("/api/ws/guacamole", wsServer)
 
+	// Serial tunnel
+	serialtunnel := serialbroker.HandleWebsocket(orInt(os.Getenv("REMOTO_REMOTE_SERIAL_PORT"), 5000))
+	r.Handle("/api/ws/serial", serialtunnel)
+
+	// SPA delivery
 	wd, _ := os.Getwd()
 	var frontend fs.FS = os.DirFS(path.Join(wd, "./client/dist"))
 	httpFS := http.FS(frontend)
@@ -64,15 +71,15 @@ func (a *Application) httpListSandboxes() http.HandlerFunc {
 func (a *Application) httpGetSession() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		session := getSession(r.Context())
+		ses := session.Get(r.Context())
 
 		// Not session exists
-		if session == nil {
+		if ses == nil {
 			httpResponse(w, http.StatusNotFound, map[string]string{"error": "no session found"})
 			return
 		}
 
-		dto := sessionToDTO(session)
+		dto := sessionToDTO(ses)
 
 		// Return session
 		httpResponse(w, http.StatusOK, dto)
@@ -246,17 +253,17 @@ func (a *Application) sessionMiddleware() middleware {
 				return
 			}
 
-			session := a.sessions.Get(sessionID.Value)
-			if session == nil {
+			ses := a.sessions.Get(sessionID.Value)
+			if ses == nil {
 				deleteCookie(rw, cookieSessionID)
 				next.ServeHTTP(rw, r)
 				return
 			}
 
 			// Update session time
-			session.Touch()
+			ses.Touch()
 
-			r = r.WithContext(withSession(r.Context(), session))
+			r = r.WithContext(session.With(r.Context(), ses))
 			next.ServeHTTP(rw, r)
 		}
 
@@ -315,10 +322,10 @@ type SessionDTO struct {
 	IsAdmin   bool   `json:"isAdmin,omitempty"`
 }
 
-func sessionToDTO(session *Session) *SessionDTO {
+func sessionToDTO(s *session.Session) *SessionDTO {
 	return &SessionDTO{
-		GroupName: session.GroupName,
-		IsAdmin:   session.IsAdmin,
+		GroupName: s.GroupName,
+		IsAdmin:   s.IsAdmin,
 	}
 }
 
