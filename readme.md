@@ -13,10 +13,9 @@ Container must be privileged, perhaps use EC2 backend for ECS instead of Fargate
 
 ## Todo:
 
-- Fix Socat service: file disappears but service keeps running
-- Implement TCP-Reconnect in serialbroker
-- Add Socat service to Sandbox docker
-- Create serial forwarder for session on /api/ws/serial
+- [ ] Update Workshop presentation / documents
+- [ ] Include workshop files into AMI
+- [ ] Update Terraform deployment to deploy EC2 instances with Sandbox AMI instead of using ECS for sandboxes
 
 # Credits
 
