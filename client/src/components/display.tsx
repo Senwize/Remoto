@@ -2,6 +2,7 @@ import { createRef, h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import Guacamole, { Keyboard, Mouse } from 'guacamole-common-js';
 import { RemoteDesktop } from '../services/remote-desktop';
+import { Clipboard } from '../services/clipboard';
 
 interface Props {
   client?: Guacamole.Client;
@@ -106,6 +107,8 @@ export const Display = ({ client, withControl }: Props) => {
       console.log('[Display] Mounting handlers');
       mountKeyboardHandler(client);
       mountMouseHandler(client);
+      const clipboard = new Clipboard();
+      clipboard.install(client);
     }
 
     return () => {
