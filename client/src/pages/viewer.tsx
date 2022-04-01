@@ -59,7 +59,7 @@ export const Viewer = () => {
     // listeners
     function onRemoteDesktopConnect(client: Guacamole.Client) {
       setClient(client);
-      // document.documentElement.requestFullscreen();
+      document.documentElement.requestFullscreen();
     }
     function onRemoteDesktopDisconnect() {
       reset();

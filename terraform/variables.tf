@@ -21,17 +21,9 @@ variable "image_guacd" {
   default = "756581103470.dkr.ecr.eu-central-1.amazonaws.com/guacd:latest"
 }
 
-variable "image_sandbox" {
+variable "ami_sandbox" {
   type    = string
-  default = "756581103470.dkr.ecr.eu-central-1.amazonaws.com/sandbox:latest"
-}
-
-// Get latest using:
-//  aws ssm get-parameters --names /aws/service/ecs/optimized-ami/amazon-linux-2/recommended \
-//  | jq -r ' .Parameters[0].Value' | jq -r .image_id
-variable "ami_ecs" {
-  type    = string
-  default = "ami-0a8b8ef11f16a92dd"
+  default = "ami-0ef1a3ec2485e2a74"
 }
 
 variable "remoto_workshop_code" {
@@ -49,14 +41,9 @@ variable "remoto_sandbox_count" {
   default = 3
 }
 
-variable "remoto_backend_instance_count" {
-  type    = number
-  default = 3
-}
-
-variable "remoto_backend_instance_type" {
+variable "remoto_sandbox_instance_type" {
   type    = string
-  default = "t3.medium"
+  default = "m5.large"
 }
 
 variable "use_cloud9" {

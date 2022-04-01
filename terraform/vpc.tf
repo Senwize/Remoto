@@ -137,5 +137,5 @@ resource "aws_route53_record" "sandbox" {
   name    = "sandbox.remoto.local"
   type    = "A"
   ttl     = "10"
-  records = concat(aws_instance.sandbox.*.private_ip, [aws_instance.test.private_ip])
+  records = aws_instance.sandbox.*.private_ip
 }
