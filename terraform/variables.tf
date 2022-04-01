@@ -23,7 +23,7 @@ variable "image_guacd" {
 
 variable "ami_sandbox" {
   type    = string
-  default = "ami-0ef1a3ec2485e2a74"
+  default = "ami-0ef33d71578630d77"
 }
 
 variable "remoto_workshop_code" {
