@@ -163,7 +163,43 @@ resource "aws_ecs_task_definition" "control" {
         {
           name  = "REMOTO_ADMIN_CODE",
           value = var.remoto_admin_code
-        }
+        },
+        {
+          name  = "REMOTO_REMOTE_PROTOCOL",
+          value = "rdp"
+        },
+        {
+          name  = "REMOTO_REMOTE_PORT",
+          value = "3389"
+        },
+        {
+          name  = "REMOTO_REMOTE_SERIAL_PORT",
+          value = "5000"
+        },
+        {
+          name  = "REMOTO_REMOTE_USERNAME",
+          value = "workshop"
+        },
+        {
+          name  = "REMOTO_REMOTE_PASSWORD",
+          value = "workshop"
+        },
+        {
+          name  = "REMOTO_REMOTE_IGNORE_CERT",
+          value = "true"
+        },
+        {
+          name  = "REMOTO_REMOTE_SECURITY",
+          value = "any"
+        },
+        {
+          name  = "REMOTO_REMOTE_WIDTH",
+          value = "1366"
+        },
+        {
+          name  = "REMOTO_REMOTE_HEIGHT",
+          value = "768"
+        },
       ],
       logConfiguration = {
         logDriver = "awslogs",
