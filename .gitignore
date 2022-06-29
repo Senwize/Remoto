@@ -3,3 +3,4 @@ node_modules
 dist
 .terraform
 secrets.auto.tfvars
+env.auto.tfvars
