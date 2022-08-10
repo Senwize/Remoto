@@ -1,7 +1,7 @@
 {
   "name": "@senwize/remoto-client",
   "version": "1.0.0",
-  "license": "UNLICENSED",
+  "license": "EUPL-1.2",
   "private": true,
   "scripts": {
     "prebuild": "rimraf dist",

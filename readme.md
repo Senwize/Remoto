@@ -113,8 +113,14 @@ USB Serial ports are tunneled from the participants environment to the virtual m
 
 Using the WebSerial features available in Chromium browser, javascript can read and write to USB Serial ports. The webclient uses websockets to tunnel this serial port to the Remoto control server. The Control server connects the websocket over TCP to a SoCat server on the virtual machine. The socat server - at last - uses it to create a PTY on the linux VM.
 
-# Credits
+## Credits
 
-Thanks to https://github.com/accetto/ubuntu-vnc-xfce-g3 for the docker Sandbox image.
+Thanks to https://github.com/accetto/ubuntu-vnc-xfce-g3 for the docker Sandbox image used in the docker-compose.
 
-Thanks to the Apache Guacamole project for allowing web-based remote desktop.
+Thanks to the Apache Guacamole project for inventing the web remote desktop protocol; guac.
+
+## License
+
+EUPL-1.2
+
+See [license.md](./license.md)
